@@ -1,25 +1,20 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from fastapi import HTTPException
+
 from app.models.inventory_event import InventoryEvent
+from app.models.product import Product
+from app.models.enums import EventType
 
 
-def record_event(db, product_id, event_type, quantity):
-    """
-    Records an inventory event (purchase or sale) and updates the inventory level.
-    For sales, it checks if there is enough inventory before recording the event.
-    
-    Args:
-        db (Session): Database session
-        product_id (int): ID of the product
-        event_type (str): Type of the event ("PURCHASE" or "SALE")
-        quantity (int): Quantity of the event (positive for purchase, negative for sale)
-    Returns:
-        InventoryEvent: The recorded inventory event
-    Raises:
-        HTTPException: If there is not enough inventory for a sale
-    """
-    if event_type == "SALE":
+def record_event(db: Session, product_id: int, event_type: EventType, quantity: int):
+
+    product = db.query(Product).filter(Product.id == product_id).first()
+
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    if event_type == EventType.SALE:
 
         current_inventory = (
             db.query(func.sum(InventoryEvent.quantity))
@@ -27,8 +22,7 @@ def record_event(db, product_id, event_type, quantity):
             .scalar()
         ) or 0
 
-        # Check if there is enough inventory for the sale
-        if current_inventory < quantity:
+        if quantity > current_inventory:
             raise HTTPException(
                 status_code=400,
                 detail="Not enough inventory for sale"
@@ -36,7 +30,6 @@ def record_event(db, product_id, event_type, quantity):
 
         quantity = -quantity
 
-    # Record the inventory event
     event = InventoryEvent(
         product_id=product_id,
         event_type=event_type,

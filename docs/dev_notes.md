@@ -402,4 +402,9 @@ The Backend is successfully running.
 
 Now, I start designing the architecture of events components. I added the inventory events apis and tested them they are working fine.
 
-[ ] need to add quantity restraint to sell and buy negative quantities. Inventory quantity however could be negative since it could be the issue if we get products damaged or perished.
+[X] need to add quantity restraint to sell and buy negative quantities. Inventory quantity however could be negative since it could be the issue if we get products damaged or perished.
+
+I added an enum class to prevent possible typos,
+
+I also added new event types such as return, damage and assignment
+
