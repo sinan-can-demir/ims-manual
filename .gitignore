@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.egg-info/
+*.egg
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Environment variables
+.env
+.env.*
+
+# Python tools
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+
+# Build
+build/
+dist/
+*.spec
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store
+
+# Node
+node_modules/
+
+# Static files
+staticfiles/
+
+# Database
+*.sqlite3
+
+# Misc
+*.swp
+*.swo
+*.bak
+*.tmp
+
+# Local settings
+local_settings.py
