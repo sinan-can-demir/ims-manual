@@ -408,3 +408,6 @@ I added an enum class to prevent possible typos,
 
 I also added new event types such as return, damage and assignment
 
+## 3/15/2026
+
+I added event based inventory api. This unified all product related apis with one variable event. IT uses the enum I created yesterday. For details check architectrue notes.

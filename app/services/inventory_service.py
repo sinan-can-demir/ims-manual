@@ -8,27 +8,50 @@ from app.models.enums import EventType
 
 
 def record_event(db: Session, product_id: int, event_type: EventType, quantity: int):
-
+    """
+    Records an inventory event and updates the inventory level accordingly.
+    For SALE and DAMAGE events, the quantity is subtracted from inventory.
+    For PURCHASE and RETURN events, the quantity is added to inventory.
+    For ADJUSTMENT events, the quantity can be positive or negative.
+    ARGS:
+        db: Database session
+        product_id: ID of the product
+        event_type: Type of the inventory event
+        quantity: Quantity of the event
+    RETURNS:        
+        The created InventoryEvent object
+    Raises:
+        HTTPException: If the product does not exist or if there is not enough inventory for SALE/DAMAGE events
+    """
     product = db.query(Product).filter(Product.id == product_id).first()
 
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    if event_type == EventType.SALE:
+    current_inventory = (
+        db.query(func.sum(InventoryEvent.quantity))
+        .filter(InventoryEvent.product_id == product_id)
+        .scalar()
+    ) or 0
 
-        current_inventory = (
-            db.query(func.sum(InventoryEvent.quantity))
-            .filter(InventoryEvent.product_id == product_id)
-            .scalar()
-        ) or 0
+    # Inventory decreasing events
+    if event_type in {EventType.SALE, EventType.DAMAGE}:
 
         if quantity > current_inventory:
             raise HTTPException(
                 status_code=400,
-                detail="Not enough inventory for sale"
+                detail="Not enough inventory"
             )
 
         quantity = -quantity
+
+    # Inventory increasing events
+    elif event_type in {EventType.PURCHASE, EventType.RETURN}:
+        quantity = quantity
+
+    # Adjustment can be positive or negative
+    elif event_type == EventType.ADJUSTMENT:
+        pass
 
     event = InventoryEvent(
         product_id=product_id,
