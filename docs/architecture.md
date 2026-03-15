@@ -58,3 +58,96 @@ DAMAGE     → -quantity
 RETURN     → +quantity
 ADJUSTMENT → ±quantity
 ```
+
+
+## 3/15/2026
+
+We will use an event-driven architecture. this will optimize our search allows us to scale systems up to millions. 
+
+The key idea is The Core Idea: Events Are the Source of Truth. Traditional systems store state. We store every change of state as an event. 
+
+Nothing is updated.
+
+We only append events.
+
+Inventory is computed as:
+
+```py
+inventory = SUM(events)
+```
+
+**Architecture Now**
+
+```bash
+WRITE PATH
+Client
+   ↓
+POST /inventory/events
+   ↓
+InventoryEvent (append-only ledger)
+   ↓
+Projection Update
+   ↓
+InventoryState
+                READ PATH
+Client
+   ↓
+GET /inventory/{product_id}
+   ↓
+InventoryState
+```
+
+So:
+
+```bash
+writes → event log
+reads  → projection
+```
+
+This pattern is called:
+
+```bash
+CQRS-lite
+
+```
+Command Query Responsibility Segregation.
+
+Commands:
+
+```bash
+POST /inventory/events
+```
+Queries:
+
+```bash
+GET /inventory
+```
+
+With this system we can reconstruct inventory anytime
+
+### Project Architecture now
+
+```bash
+                ┌──────────────┐
+                │   Products   │
+                └──────┬───────┘
+                       │
+                       ▼
+               ┌──────────────┐
+               │InventoryEvent│
+               │  (ledger)    │
+               └──────┬───────┘
+                      │
+                      ▼
+               ┌──────────────┐
+               │InventoryState│
+               │ (projection) │
+               └──────┬───────┘
+                      │
+                      ▼
+               GET /inventory
+```
+
+---
+
+Created `test_scripts` directory to keep the automated tests here.

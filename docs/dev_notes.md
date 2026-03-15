@@ -411,3 +411,7 @@ I also added new event types such as return, damage and assignment
 ## 3/15/2026
 
 I added event based inventory api. This unified all product related apis with one variable event. IT uses the enum I created yesterday. For details check architectrue notes.
+
+I added a test_scripts directory to create test scripts in bash, since each time I don't wanna write the tests one by one or go to swagger to click execute :D this is more mature.
+
+The entire pipeline of my IMS is working now. The testing script also runs automated tests.

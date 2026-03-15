@@ -3,6 +3,7 @@ from sqlalchemy import func
 from fastapi import HTTPException
 
 from app.models.inventory_event import InventoryEvent
+from app.models.inventory_state import InventoryState
 from app.models.product import Product
 from app.models.enums import EventType
 
@@ -28,11 +29,11 @@ def record_event(db: Session, product_id: int, event_type: EventType, quantity: 
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    current_inventory = (
-        db.query(func.sum(InventoryEvent.quantity))
-        .filter(InventoryEvent.product_id == product_id)
-        .scalar()
-    ) or 0
+    state = db.query(InventoryState).filter(
+        InventoryState.product_id == product_id
+    ).first()
+
+    current_inventory = state.quantity if state else 0
 
     # Inventory decreasing events
     if event_type in {EventType.SALE, EventType.DAMAGE}:
@@ -58,6 +59,17 @@ def record_event(db: Session, product_id: int, event_type: EventType, quantity: 
         event_type=event_type,
         quantity=quantity
     )
+
+    # Create projection row if it doesn't exist
+    if not state:
+        state = InventoryState(
+            product_id=product_id,
+            quantity=0
+        )
+        db.add(state)
+
+    # Update current inventory snapshot
+    state.quantity += quantity
 
     db.add(event)
     db.commit()
