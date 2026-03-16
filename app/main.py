@@ -6,7 +6,6 @@ from app.models.inventory_state import InventoryState
 from app.api.products import router as products_router
 from app.api.inventory import router as inventory_router
 
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
