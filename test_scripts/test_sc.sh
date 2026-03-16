@@ -4,33 +4,83 @@ set -euo pipefail
 
 BASE="http://localhost:8000"
 
-echo "Starting containers..."
+############################################
+# Colors
+############################################
+
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+pass() { echo -e "${GREEN}PASS:${NC} $1"; }
+fail() { echo -e "${RED}FAIL:${NC} $1"; exit 1; }
+info() { echo -e "${BLUE}INFO:${NC} $1"; }
+warn() { echo -e "${YELLOW}WARN:${NC} $1"; }
+
+############################################
+# Start containers
+############################################
+
+info "Starting containers..."
 
 docker compose down
 docker compose up --build -d
 
-echo "Waiting for API to become ready..."
+############################################
+# Wait for DB
+############################################
 
-for i in {1..30}; do
-    if curl -s "$BASE/docs" > /dev/null; then
-        echo "API is ready"
+info "Waiting for database..."
+
+for i in {1..20}; do
+    if docker compose exec -T db pg_isready -U postgres > /dev/null 2>&1; then
+        pass "Database ready"
         break
     fi
 
-    if [ "$i" -eq 30 ]; then
-        echo "FAIL: API did not become ready in time"
-        exit 1
+    if [ "$i" -eq 20 ]; then
+        fail "Database did not start"
     fi
 
     sleep 1
 done
 
+############################################
+# Run migrations
+############################################
+
+info "Running migrations..."
+
+docker compose exec -T api alembic upgrade head
+
+pass "Database migrations applied"
+
+############################################
+# Wait for API
+############################################
+
+info "Waiting for API..."
+
+for i in {1..30}; do
+    if curl -s "$BASE/docs" > /dev/null; then
+        pass "API ready"
+        break
+    fi
+
+    if [ "$i" -eq 30 ]; then
+        fail "API did not become ready"
+    fi
+
+    sleep 1
+done
 
 ############################################
 # Test 1 — Create Product
 ############################################
 
-echo "Testing POST /api/products"
+info "Testing POST /api/products"
 
 SKU="test-sku-$(date +%s)"
 
@@ -45,25 +95,22 @@ echo "Status: $status"
 echo "Body: $body"
 
 if [[ "$status" != "200" && "$status" != "201" ]]; then
-    echo "FAIL: Create product"
-    exit 1
+    fail "Create product failed"
 fi
 
 product_id=$(echo "$body" | jq -r '.id')
 
 if [[ -z "$product_id" || "$product_id" == "null" ]]; then
-    echo "FAIL: Could not extract product id"
-    exit 1
+    fail "Could not extract product id"
 fi
 
-echo "PASS: Product created with id $product_id"
-
+pass "Product created with id $product_id"
 
 ############################################
-# Test 2 — Purchase Inventory
+# Test 2 — Purchase Event
 ############################################
 
-echo "Testing POST /api/inventory/events (PURCHASE)"
+info "Testing PURCHASE event"
 
 purchase_response=$(curl -s -w "%{http_code}" -X POST "$BASE/api/inventory/events" \
   -H "Content-Type: application/json" \
@@ -72,134 +119,89 @@ purchase_response=$(curl -s -w "%{http_code}" -X POST "$BASE/api/inventory/event
 purchase_body="${purchase_response::-3}"
 purchase_status="${purchase_response: -3}"
 
-echo "Status: $purchase_status"
-echo "Body: $purchase_body"
-
-if [[ "$purchase_status" != "201" && "$purchase_status" != "200" ]]; then
-    echo "FAIL: Purchase event failed"
-    exit 1
+if [[ "$purchase_status" != "200" && "$purchase_status" != "201" ]]; then
+    fail "Purchase event failed"
 fi
 
-echo "PASS: Purchase event recorded"
-
+pass "Purchase event recorded"
 
 ############################################
 # Test 3 — Verify Inventory = 50
 ############################################
 
-echo "Testing GET /api/inventory/$product_id"
+info "Testing inventory lookup"
 
 inventory_response=$(curl -s -w "%{http_code}" -X GET "$BASE/api/inventory/$product_id")
 
 inventory_body="${inventory_response::-3}"
 inventory_status="${inventory_response: -3}"
 
-echo "Status: $inventory_status"
-echo "Body: $inventory_body"
-
 if [[ "$inventory_status" != "200" ]]; then
-    echo "FAIL: Inventory lookup failed"
-    exit 1
+    fail "Inventory lookup failed"
 fi
 
 quantity=$(echo "$inventory_body" | jq -r '.inventory')
 
-if [[ -z "$quantity" || "$quantity" == "null" ]]; then
-    echo "FAIL: Could not parse inventory value"
-    exit 1
-fi
-
 if [[ "$quantity" != "50" ]]; then
-    echo "FAIL: Expected inventory 50, got $quantity"
-    exit 1
+    fail "Expected inventory 50, got $quantity"
 fi
 
-echo "PASS: Inventory correctly updated to 50"
-
+pass "Inventory correctly updated to 50"
 
 ############################################
 # Test 4 — Sale Event
 ############################################
 
-echo "Testing POST /api/inventory/events (SALE)"
+info "Testing SALE event"
 
 sale_response=$(curl -s -w "%{http_code}" -X POST "$BASE/api/inventory/events" \
   -H "Content-Type: application/json" \
   -d "{\"product_id\":$product_id,\"event_type\":\"SALE\",\"quantity\":10}")
 
-sale_body="${sale_response::-3}"
 sale_status="${sale_response: -3}"
 
-echo "Status: $sale_status"
-echo "Body: $sale_body"
-
-if [[ "$sale_status" != "201" && "$sale_status" != "200" ]]; then
-    echo "FAIL: Sale event failed"
-    exit 1
+if [[ "$sale_status" != "200" && "$sale_status" != "201" ]]; then
+    fail "Sale event failed"
 fi
 
-echo "PASS: Sale event recorded"
-
+pass "Sale event recorded"
 
 ############################################
 # Test 5 — Verify Inventory = 40
 ############################################
 
-echo "Testing GET /api/inventory/$product_id after sale"
+info "Testing inventory after sale"
 
 inventory_response=$(curl -s -w "%{http_code}" -X GET "$BASE/api/inventory/$product_id")
 
 inventory_body="${inventory_response::-3}"
-inventory_status="${inventory_response: -3}"
-
-echo "Status: $inventory_status"
-echo "Body: $inventory_body"
-
-if [[ "$inventory_status" != "200" ]]; then
-    echo "FAIL: Inventory lookup after sale failed"
-    exit 1
-fi
-
 quantity=$(echo "$inventory_body" | jq -r '.inventory')
 
-if [[ -z "$quantity" || "$quantity" == "null" ]]; then
-    echo "FAIL: Could not parse inventory value after sale"
-    exit 1
-fi
-
 if [[ "$quantity" != "40" ]]; then
-    echo "FAIL: Expected inventory 40, got $quantity"
-    exit 1
+    fail "Expected inventory 40, got $quantity"
 fi
 
-echo "PASS: Inventory correctly updated to 40"
-
+pass "Inventory correctly updated to 40"
 
 ############################################
 # Test 6 — Oversell Protection
 ############################################
 
-echo "Testing oversell protection"
+info "Testing oversell protection"
 
 oversell_response=$(curl -s -w "%{http_code}" -X POST "$BASE/api/inventory/events" \
   -H "Content-Type: application/json" \
   -d "{\"product_id\":$product_id,\"event_type\":\"SALE\",\"quantity\":100}")
 
-oversell_body="${oversell_response::-3}"
 oversell_status="${oversell_response: -3}"
 
-echo "Status: $oversell_status"
-echo "Body: $oversell_body"
-
 if [[ "$oversell_status" != "400" ]]; then
-    echo "FAIL: Oversell protection not triggered"
-    exit 1
+    fail "Oversell protection not triggered"
 fi
 
-echo "PASS: Oversell correctly rejected"
-
+pass "Oversell correctly rejected"
 
 ############################################
 
 echo ""
-echo "All system tests passed successfully"
+echo -e "${GREEN}All system tests passed successfully${NC}"
