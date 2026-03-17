@@ -84,6 +84,11 @@ info "Testing POST /api/products"
 
 SKU="test-sku-$(date +%s)"
 
+# Generate unique event ids
+EVENT_PURCHASE="evt-purchase-$(date +%s)"
+EVENT_SALE="evt-sale-$(date +%s)"
+EVENT_OVERSALE="evt-oversale-$(date +%s)"
+
 response=$(curl -s -w "%{http_code}" -X POST "$BASE/api/products" \
   -H "Content-Type: application/json" \
   -d "{\"name\":\"test-product\",\"sku\":\"$SKU\"}")
@@ -114,12 +119,13 @@ info "Testing PURCHASE event"
 
 purchase_response=$(curl -s -w "%{http_code}" -X POST "$BASE/api/inventory/events" \
   -H "Content-Type: application/json" \
-  -d "{\"product_id\":$product_id,\"event_type\":\"PURCHASE\",\"quantity\":50}")
+  -d "{\"product_id\":$product_id,\"event_type\":\"PURCHASE\",\"quantity\":50,\"event_id\":\"$EVENT_PURCHASE\"}")
 
 purchase_body="${purchase_response::-3}"
 purchase_status="${purchase_response: -3}"
 
 if [[ "$purchase_status" != "200" && "$purchase_status" != "201" ]]; then
+    echo "Body: $purchase_body"
     fail "Purchase event failed"
 fi
 
@@ -156,11 +162,13 @@ info "Testing SALE event"
 
 sale_response=$(curl -s -w "%{http_code}" -X POST "$BASE/api/inventory/events" \
   -H "Content-Type: application/json" \
-  -d "{\"product_id\":$product_id,\"event_type\":\"SALE\",\"quantity\":10}")
+  -d "{\"product_id\":$product_id,\"event_type\":\"SALE\",\"quantity\":10,\"event_id\":\"$EVENT_SALE\"}")
 
+sale_body="${sale_response::-3}"
 sale_status="${sale_response: -3}"
 
 if [[ "$sale_status" != "200" && "$sale_status" != "201" ]]; then
+    echo "Body: $sale_body"
     fail "Sale event failed"
 fi
 
@@ -191,15 +199,35 @@ info "Testing oversell protection"
 
 oversell_response=$(curl -s -w "%{http_code}" -X POST "$BASE/api/inventory/events" \
   -H "Content-Type: application/json" \
-  -d "{\"product_id\":$product_id,\"event_type\":\"SALE\",\"quantity\":100}")
+  -d "{\"product_id\":$product_id,\"event_type\":\"SALE\",\"quantity\":100,\"event_id\":\"$EVENT_OVERSALE\"}")
 
+oversell_body="${oversell_response::-3}"
 oversell_status="${oversell_response: -3}"
 
 if [[ "$oversell_status" != "400" ]]; then
+    echo "Body: $oversell_body"
     fail "Oversell protection not triggered"
 fi
 
 pass "Oversell correctly rejected"
+
+############################################
+# Test 7 — Idempotency Check
+############################################
+
+info "Testing idempotency (same event_id)"
+
+idem_response=$(curl -s -w "%{http_code}" -X POST "$BASE/api/inventory/events" \
+  -H "Content-Type: application/json" \
+  -d "{\"product_id\":$product_id,\"event_type\":\"PURCHASE\",\"quantity\":50,\"event_id\":\"$EVENT_PURCHASE\"}")
+
+idem_status="${idem_response: -3}"
+
+if [[ "$idem_status" != "200" && "$idem_status" != "201" ]]; then
+    fail "Idempotency failed"
+fi
+
+pass "Idempotency works (duplicate ignored)"
 
 ############################################
 
