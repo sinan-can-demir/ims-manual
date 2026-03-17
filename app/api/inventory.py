@@ -19,7 +19,8 @@ def create_inventory_event(
         db,
         event.product_id,
         event.event_type,
-        event.quantity
+        event.quantity,
+        event.event_id
     )
 
 
