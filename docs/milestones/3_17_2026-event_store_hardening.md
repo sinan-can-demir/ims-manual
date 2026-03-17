@@ -297,20 +297,21 @@ This prepares the system for:
 -   [✔] Add event indexes
 -   [✔] Enforce `product_id` NOT NULL
 -   [✔] Add `event_id` idempotency
--   [✔] Add testing script (.sh) for new features.
+-   [✔] Add testing script (.sh) for new feature
 
 ## Inventory Logic
 
--   [ ] Verify projection logic
+-   [✔] Verify projection logic
 
 ## Testing
 
--   [ ] Create `tests/` directory
--   [ ] Install pytest dependencies
--   [ ] Add product API test
--   [ ] Add inventory event test
--   [ ] Add projection test
+-   [✔] Create `tests/` directory
+-   [✔] Install pytest dependencies
+-   [✔] Add product API test
+-   [✔] Add inventory event test
+-   [✔] Add projection test
+-   [✔] Add idempotency test
 
 ## Documentation
 
--   [ ] Write `docs/event_system.md`
+-   [✔] Write `docs/event_system.md`
