@@ -6,6 +6,7 @@ class InventoryEventCreate(BaseModel):
     product_id: int
     event_type: EventType
     quantity: int
+    event_id: str
 
 class InventoryEventResponse(BaseModel):
     id: int
