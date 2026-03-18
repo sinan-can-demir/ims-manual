@@ -1,5 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
+
 from fastapi import HTTPException
 
 from app.models.inventory_event import InventoryEvent
@@ -8,7 +10,28 @@ from app.models.product import Product
 from app.models.enums import EventType
 
 
-from sqlalchemy.exc import IntegrityError
+
+def normalize_quantity(event_type: EventType, quantity: int) -> int:
+    # Zero quantity doesn't make sense for any event type, so we reject it
+    if quantity == 0:
+        raise HTTPException(status_code=400, detail="Quantity must not be zero")
+
+    # For PURCHASE and RETURN, quantity is added to inventory, so we return it as is
+    if event_type in {EventType.PURCHASE, EventType.RETURN}:
+        if quantity < 0:
+            raise HTTPException(status_code=400, detail="Quantity must be positive")
+        return quantity
+
+    
+    if event_type in {EventType.SALE, EventType.DAMAGE}:
+        if quantity < 0:
+            raise HTTPException(status_code=400, detail="Quantity must be positive")
+        return -quantity
+
+    if event_type == EventType.ADJUSTMENT:
+        return quantity
+
+    raise HTTPException(status_code=400, detail="Invalid event type")
 
 def record_event(
     db: Session,
@@ -38,32 +61,25 @@ def record_event(
         InventoryState.product_id == product_id
     ).first()
 
+    delta = normalize_quantity(event_type, quantity)
+
     current_inventory = state.quantity if state else 0
 
-    if event_type in {EventType.SALE, EventType.DAMAGE}:
-        # For SALE and DAMAGE, quantity should be negative (reducing inventory)
-        if quantity > current_inventory:
-            raise HTTPException(status_code=400, detail="Not enough inventory")
-        quantity = -quantity
-    # For PURCHASE and RETURN, quantity should be positive (increasing inventory)
-    elif event_type in {EventType.PURCHASE, EventType.RETURN}:
-        pass
-    # For ADJUSTMENT, quantity can be positive or negative, so we don't change it
-    elif event_type == EventType.ADJUSTMENT:
-        pass
+    if delta < 0 and abs(delta) > current_inventory:
+        raise HTTPException(status_code=400, detail="Not enough inventory")
 
     event = InventoryEvent(
         product_id=product_id,
         event_type=event_type,
-        quantity=quantity,
+        quantity=delta,
         event_id=event_id
     )
-    # Update or create inventory state
+
     if not state:
         state = InventoryState(product_id=product_id, quantity=0)
         db.add(state)
 
-    state.quantity += quantity
+    state.quantity += delta
 
     try:
         db.add(event)
