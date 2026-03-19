@@ -109,10 +109,13 @@ def record_event(
 
 def get_inventory(db: Session, product_id: int):
 
-    total = (
-        db.query(func.sum(InventoryEvent.quantity))
-        .filter(InventoryEvent.product_id == product_id)
-        .scalar()
+    state = (
+        db.query(InventoryState)
+        .filter(InventoryState.product_id == product_id)
+        .first()
     )
 
-    return total or 0
+    if not state:
+        return 0
+
+    return state.quantity
