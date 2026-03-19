@@ -4,38 +4,47 @@
 
 ### 🧮 Event Quantity Normalization (DATA CORRUPTION BUG)
 
-* [ ] Define clear quantity rules per event type
-* [ ] Enforce: PURCHASE / RETURN must be **positive only**
-* [ ] Enforce: SALE / DAMAGE must be **positive input → negative internal**
-* [ ] Allow ADJUSTMENT to be positive or negative (explicitly)
-* [ ] Add `normalize_quantity(event_type, quantity)` helper in service layer
-* [ ] Replace all direct quantity usage with normalized value
-* [ ] Add validation error (400) for invalid sign usage
-* [ ] Write tests:
+* [✔] Define clear quantity rules per event type
+* [✔] Enforce: PURCHASE / RETURN must be **positive only**
+* [✔] Enforce: SALE / DAMAGE must be **positive input → negative internal**
+* [✔] Allow ADJUSTMENT to be positive or negative (explicitly)
+* [✔] Add `normalize_quantity(event_type, quantity)` helper in service layer
+* [✔] Replace all direct quantity usage with normalized value
+* [✔] Add validation error (400) for invalid sign usage
+* [✔] Write tests:
 
-  * [ ] SALE with negative input → should fail
-  * [ ] PURCHASE with negative input → should fail
-  * [ ] ADJUSTMENT negative → allowed
-  * [ ] Zero quantity → rejected
+  * [✔] SALE with negative input → should fail
+  * [✔] PURCHASE with negative input → should fail
+  * [✔] ADJUSTMENT negative → allowed
+  * [✔] Zero quantity → rejected
 
 ---
 
 ### 📊 Single Source of Truth Decision
 
-* [ ] Decide: `inventory_events` = source of truth
-* [ ] Decide: `inventory_state` = projection
-* [ ] Update `get_inventory()` to read from `inventory_state`
-* [ ] Remove SUM(event) logic from normal read path
+* [✔] Decide: `inventory_events` = source of truth
+* [✔] Decide: `inventory_state` = projection
+* [✔] Update `get_inventory()` to read from `inventory_state`
+* [✔] Remove SUM(event) logic from normal read path
 * [ ] (Optional) create reconciliation function:
 
-  * [ ] `recompute_inventory_from_events(product_id)`
-* [ ] Ensure service writes:
+```bash
+WRITE:
+  events → append
+  state  → update
 
-  * [ ] insert event
-  * [ ] update projection
-* [ ] Add test:
+READ:
+  state → return
+```
 
-  * [ ] projection matches expected after sequence of events
+  * [✔] `recompute_inventory_from_events(product_id)`
+* [✔] Ensure service writes:
+
+  * [✔] insert event
+  * [✔] update projection
+* [✔] Add test:
+
+  * [✔] projection matches expected after sequence of events
 
 ---
 
@@ -55,7 +64,7 @@
 
 ### 🧪 Test Database Isolation
 
-* [ ] Remove hardcoded DB URL from `tests/conftest.py`
+* [✔] Remove hardcoded DB URL from `tests/conftest.py`
 * [ ] Use environment variable for test DB
 * [ ] Add `.env.test` or override in pytest
 * [ ] Option A (recommended now):
