@@ -1,3 +1,41 @@
+# 📦 IMS Makefile
+
+.PHONY: up down reset rebuild logs test test-e2e test-all test-clean migrate shell
+
+# -------------------------
+# Dev lifecycle
+# -------------------------
+up:
+	docker compose up
+
+up-d:
+	docker compose up -d
+
+down:
+	docker compose down
+
+reset:
+	docker compose down -v
+	docker compose up --build
+
+rebuild:
+	docker compose up --build
+
+logs:
+	docker compose logs -f
+
+# -------------------------
+# Database
+# -------------------------
+migrate:
+	docker compose exec api alembic upgrade head
+
+# -------------------------
+# Shell access
+# -------------------------
+shell:
+	docker compose exec api sh
+
 # -------------------------
 # Pytest (fast tests)
 # -------------------------
