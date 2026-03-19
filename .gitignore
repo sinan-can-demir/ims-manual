@@ -44,6 +44,7 @@ staticfiles/
 
 # Database
 *.sqlite3
+test.db
 
 # Misc
 *.swp
