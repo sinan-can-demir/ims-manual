@@ -65,8 +65,9 @@ def record_event(
 
     current_inventory = state.quantity if state else 0
 
-    if delta < 0 and abs(delta) > current_inventory:
-        raise HTTPException(status_code=400, detail="Not enough inventory")
+    if event_type in {EventType.SALE, EventType.DAMAGE}:
+        if abs(delta) > current_inventory:
+            raise HTTPException(status_code=400, detail="Not enough inventory")
 
     event = InventoryEvent(
         product_id=product_id,
