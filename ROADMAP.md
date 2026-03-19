@@ -1,6 +1,6 @@
 # IMS — Inventory Management System
 Author: Sinan Demir
-Last Updated: 2026-03-16
+Last Updated: 2026-03-19
 
 This roadmap organizes the development of IMS (Inventory Management System) into **epochs**.
 Each epoch unlocks the next capability. The system evolves from a simple backend into a full
@@ -12,6 +12,7 @@ Core principles:
 - Pipelines must be **reproducible**
 - ML depends on **data quality**
 
+I am learning along the way so this is beyond what I can do for this time, but I am working on it.
 
 ------------------------------------------------------------
 EPOCH 0 — Foundations
@@ -44,13 +45,13 @@ EPOCH 1 — Event‑Driven Backend
 
 Goal: Build a robust event‑driven inventory system.
 
-[ ] Add event table indexes
-[ ] Enforce product_id NOT NULL in events
-[ ] Add idempotency key to events
-[ ] Improve projection logic
+[x] Add event table indexes
+[x] Enforce product_id NOT NULL in events
+[x] Add idempotency key to events
+[x] Improve projection logic
 [ ] Add event replay capability
 [ ] Add structured logging
-[ ] Add integration tests
+[x] Add integration tests
 
 Features:
 - InventoryEvent = source of truth

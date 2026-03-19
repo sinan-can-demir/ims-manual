@@ -1,5 +1,8 @@
 # 📦 IMS — Inventory Hardening Debug Checklist (3/18/2026)
 
+> **Last reviewed:** 3/19/2026
+> **Overall progress:** ~60% complete (Phase 1: ✅ 100%, Phase 2: ✅ 80%, Phase 3: ⏳ 20%, Bonus: ✅ 50%)
+
 ## 🔴 PHASE 1 — CRITICAL CORRECTNESS (MUST FIX FIRST)
 
 ### 🧮 Event Quantity Normalization (DATA CORRUPTION BUG)
@@ -58,8 +61,6 @@ READ:
 
   * [✔] creating duplicate SKU returns 409
 
----
-
 ## 🟡 PHASE 2 — SYSTEM RELIABILITY
 
 ### 🧪 Test Database Isolation
@@ -101,17 +102,17 @@ READ:
 
 ### 📘 README Sync
 
-* [ ] Remove non-existing endpoints from README
-* [ ] OR implement missing endpoints:
+* [✔] Remove non-existing endpoints from README
+* [✔] OR implement missing endpoints:
 
-  * [ ] GET /products
-  * [ ] GET /products/{id}
-* [ ] Update inventory endpoints to:
+  * [x] GET /products (NOT IMPLEMENTED - removed from docs)
+  * [x] GET /products/{id} (NOT IMPLEMENTED - removed from docs)
+* [✔] Update inventory endpoints to:
 
-  * [ ] POST /inventory/events
-  * [ ] GET /inventory/{product_id}
-* [ ] Add example request/response payloads
-* [ ] Add "How to run locally" section (accurate)
+  * [✔] POST /inventory/events
+  * [✔] GET /inventory/{product_id}
+* [✔] Add example request/response payloads
+* [✔] Add "How to run locally" section (accurate)
 
 ---
 
@@ -138,8 +139,8 @@ READ:
 * [ ] Service should construct ORM model
 * [ ] Update type hints:
 
-  * [ ] service takes `ProductCreate`, not `Product`
-* [ ] Refactor inventory routes similarly if needed
+  * [x] service takes `ProductCreate`, not `Product` ✅
+* [~] Refactor inventory routes similarly if needed (inventory routes done ✅, products route partially ❌)
 
 ---
 
@@ -151,10 +152,10 @@ READ:
   * [ ] POST /inventory/events
   * [ ] GET /inventory/{product_id}
 * [ ] Ensure schemas match actual DB output
-* [ ] Set correct status codes:
+* [✔] Set correct status codes:
 
-  * [ ] POST /products → 201
-  * [ ] POST /inventory/events → 201
+  * [✔] POST /products → 201
+  * [✔] POST /inventory/events → 201
 
 ---
 
@@ -189,24 +190,28 @@ READ:
 
 ### 🔁 Idempotency Safety (if not complete)
 
-* [ ] Ensure `event_id` is unique
-* [ ] Reject duplicate events cleanly
-* [ ] Add test:
+* [✔] Ensure `event_id` is unique
+* [✔] Reject duplicate events cleanly
+* [✔] Add test:
 
-  * [ ] same event_id → no duplicate insert
+  * [✔] same event_id → no duplicate insert
 
 ---
 
 ### 🧪 Test Coverage Expansion
 
-* [ ] Add inventory flow test:
+* [~] Add inventory flow test:
 
-  * [ ] purchase → sale → return → damage
-* [ ] Add edge case tests:
+  * [✔] purchase → sale ✅
+  * [ ] return → damage (not tested)
+* [~] Add edge case tests:
 
-  * [ ] zero inventory sale → fail
-  * [ ] large adjustments
-* [ ] Add negative scenarios
+  * [✔] zero inventory sale → fail ✅
+  * [ ] large adjustments (not tested)
+* [~] Add negative scenarios
+
+  * [✔] idempotency ✅
+  * [ ] other negative scenarios (partial)
 
 ---
 
