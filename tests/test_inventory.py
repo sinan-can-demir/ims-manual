@@ -42,3 +42,25 @@ def test_oversell_protection(client):
     })
 
     assert response.status_code == 400
+
+def test_projection_consistency(client):
+    product = create_product(client)
+    pid = product["id"]
+
+    client.post("/api/inventory/events", json={
+        "product_id": pid,
+        "event_type": "PURCHASE",
+        "quantity": 20,
+        "event_id": "evt-a"
+    })
+
+    client.post("/api/inventory/events", json={
+        "product_id": pid,
+        "event_type": "SALE",
+        "quantity": 5,
+        "event_id": "evt-b"
+    })
+
+    response = client.get(f"/api/inventory/{pid}")
+
+    assert response.json()["inventory"] == 15
