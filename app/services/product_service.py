@@ -1,17 +1,21 @@
 from sqlalchemy.orm import Session
 from app.schemas.product import ProductCreate
 from app.models.product import Product
+from sqlalchemy.exc import IntegrityError
+from fastapi import HTTPException
 
+def create_product(db: Session, product: ProductCreate):
+    new_product = Product(name=product.name, sku=product.sku)
 
-def create_product(db: Session, product_data: ProductCreate) -> Product:
+    try:
+        db.add(new_product)
+        db.commit()
+        db.refresh(new_product)
+        return new_product
 
-    product = Product(name=product_data.name, sku=product_data.sku)
-
-    db.add(product)
-
-    db.commit()
-
-    db.refresh(product)
-
-    return product
-
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Product with this SKU already exists"
+        )
