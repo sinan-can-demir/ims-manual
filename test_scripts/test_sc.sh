@@ -20,12 +20,24 @@ info() { echo -e "${BLUE}INFO:${NC} $1"; }
 warn() { echo -e "${YELLOW}WARN:${NC} $1"; }
 
 ############################################
+# Dependencies
+############################################
+
+command -v jq >/dev/null 2>&1 || fail "jq is required but not installed"
+
+############################################
+# Cleanup on exit
+############################################
+
+trap 'docker compose down -v' EXIT
+
+############################################
 # Start containers
 ############################################
 
 info "Starting containers..."
 
-docker compose down
+docker compose down -v
 docker compose up --build -d
 
 ############################################
@@ -48,23 +60,13 @@ for i in {1..20}; do
 done
 
 ############################################
-# Run migrations
-############################################
-
-info "Running migrations..."
-
-docker compose exec -T api alembic upgrade head
-
-pass "Database migrations applied"
-
-############################################
 # Wait for API
 ############################################
 
 info "Waiting for API..."
 
 for i in {1..30}; do
-    if curl -s "$BASE/docs" > /dev/null; then
+    if curl -sf "$BASE/docs" > /dev/null; then
         pass "API ready"
         break
     fi
@@ -83,8 +85,6 @@ done
 info "Testing POST /api/products"
 
 SKU="test-sku-$(date +%s)"
-
-# Generate unique event ids
 EVENT_PURCHASE="evt-purchase-$(date +%s)"
 EVENT_SALE="evt-sale-$(date +%s)"
 EVENT_OVERSALE="evt-oversale-$(date +%s)"
@@ -96,10 +96,8 @@ response=$(curl -s -w "%{http_code}" -X POST "$BASE/api/products" \
 body="${response::-3}"
 status="${response: -3}"
 
-echo "Status: $status"
-echo "Body: $body"
-
-if [[ "$status" != "200" && "$status" != "201" ]]; then
+if [[ "$status" != "201" ]]; then
+    echo "Body: $body"
     fail "Create product failed"
 fi
 
@@ -124,7 +122,7 @@ purchase_response=$(curl -s -w "%{http_code}" -X POST "$BASE/api/inventory/event
 purchase_body="${purchase_response::-3}"
 purchase_status="${purchase_response: -3}"
 
-if [[ "$purchase_status" != "200" && "$purchase_status" != "201" ]]; then
+if [[ "$purchase_status" != "201" ]]; then
     echo "Body: $purchase_body"
     fail "Purchase event failed"
 fi
@@ -167,7 +165,7 @@ sale_response=$(curl -s -w "%{http_code}" -X POST "$BASE/api/inventory/events" \
 sale_body="${sale_response::-3}"
 sale_status="${sale_response: -3}"
 
-if [[ "$sale_status" != "200" && "$sale_status" != "201" ]]; then
+if [[ "$sale_status" != "201" ]]; then
     echo "Body: $sale_body"
     fail "Sale event failed"
 fi
