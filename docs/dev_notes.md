@@ -580,3 +580,8 @@ The output:
 saved in `docs/migrations.md`
 
 Todays Milestone: Complete!
+
+
+## 3/19/2026
+
+I decided to use in memory test DB because it will reset each time when we run the test and then remove it.

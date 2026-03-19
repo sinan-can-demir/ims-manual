@@ -50,13 +50,13 @@ READ:
 
 ### ⚠️ Duplicate SKU Handling
 
-* [ ] Wrap `db.commit()` in try/except
-* [ ] Catch `IntegrityError`
-* [ ] Rollback session on error
-* [ ] Return HTTP 409 (Conflict)
-* [ ] Add test:
+* [✔] Wrap `db.commit()` in try/except
+* [✔] Catch `IntegrityError`
+* [✔ ] Rollback session on error
+* [✔] Return HTTP 409 (Conflict)
+* [✔] Add test:
 
-  * [ ] creating duplicate SKU returns 409
+  * [✔] creating duplicate SKU returns 409
 
 ---
 
@@ -65,34 +65,37 @@ READ:
 ### 🧪 Test Database Isolation
 
 * [✔] Remove hardcoded DB URL from `tests/conftest.py`
-* [ ] Use environment variable for test DB
-* [ ] Add `.env.test` or override in pytest
-* [ ] Option A (recommended now):
+* [✔] Use environment variable for test DB
+* [✔] Add `.env.test` or override in pytest
+* [✔] Option A (recommended now):
 
-  * [ ] Use SQLite for unit tests
+  * [✔] Use SQLite for unit tests
 * [ ] Option B (later):
 
   * [ ] Spin up Postgres container for tests
-* [ ] Ensure:
+* [✔] Ensure:
 
-  * [ ] tests create tables automatically
-  * [ ] tests teardown cleanly
+  * [✔] tests create tables automatically
+  * [✔] tests teardown cleanly
 
 ---
 
 ### 🚀 Startup / Migration Consistency
 
-* [ ] Ensure migrations run automatically on startup OR documented clearly
-* [ ] Option A:
+* [✔] Ensure migrations run automatically on startup OR documented clearly
+* [✔] Option A:
 
-  * [ ] Add migration step in `docker-compose`
-* [ ] Option B:
+  * [✔] Add migration step in `docker-compose`
 
-  * [ ] Add `Makefile` command: `make migrate`
-* [ ] Update README with exact startup steps
-* [ ] Verify:
+  - This part is done. When we use `docker compose up` command the migrations start automatically.
 
-  * [ ] fresh clone → works without manual fixes
+* [✔] Option B:
+
+  * [✔] Add `Makefile` command: `make migrate`
+* [✔] Update README with exact startup steps
+* [✔] Verify:
+
+  * [✔] fresh clone → works without manual fixes
 
 ---
 
