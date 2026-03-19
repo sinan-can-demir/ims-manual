@@ -1,223 +1,565 @@
-# IMS --- Inventory Management System
+# IMS — Inventory Management System
 
-A minimal event‑driven **Inventory Management System** designed to
-evolve into a **data platform + ML pipeline**.
+A high-performance, event-driven inventory management system built with FastAPI and PostgreSQL. IMS tracks inventory changes through an append-only event log, enabling full auditability, event replay, and analytics capabilities.
 
-------------------------------------------------------------------------
+This system implements a simplified form of **event sourcing**, where all state changes are recorded as immutable events and projections are derived from them.
 
-# System Vision
+I created this system to help small businesses manage their inventory with a modern, professional tool at no cost.
 
-The IMS platform will eventually support:
+With recent advancements in AI, I wanted to create something meaningful that could integrate with predictive models. This program will evolve to predict estimated restock quantities and dates.
 
--   Inventory operations
--   Data pipelines
--   Analytics datasets
--   Demand forecasting models
--   ML monitoring
+With recent advancements in AI, I wanted to create something meaningful that could integrate with predictive models.
 
-Architecture philosophy:
+---
 
-Events are the source of truth\
-Schemas are contracts\
-Pipelines must be reproducible\
-ML depends on data quality
+## Table of Contents
 
-------------------------------------------------------------------------
+- [Features](#features)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Local Development](#local-development)
+  - [Docker Development](#docker-development)
+- [API Reference](#api-reference)
+  - [Products](#products)
+  - [Inventory Events](#inventory-events)
+- [Database Schema](#database-schema)
+- [Event Types](#event-types)
+- [Testing](#testing)
+- [Development Workflow](#development-workflow)
+- [Environment Variables](#environment-variables)
+- [Roadmap](#roadmap)
 
-# High Level Architecture
+---
 
-FastAPI Service (Inventory API) │ │ writes ▼ PostgreSQL
-(inventory_events) │ │ batch export ▼ Data Lake (Parquet datasets) │ │
-transformations ▼ Analytics Layer (daily sales) │ ▼ ML Pipeline
-(forecasting)
+## Features
 
-------------------------------------------------------------------------
+- **Event-Driven Architecture**: All inventory changes are recorded as immutable events in an append-only ledger
+- **CQRS Pattern**: Separate write (events) and read (state projection) paths for optimized performance
+- **Idempotent Operations**: Duplicate events are safely handled using event IDs
+- **Oversell Protection**: Prevents sales and damage events that exceed available inventory
+- **Full Audit Trail**: Complete history of every inventory change with timestamps
+- **Event Replay**: Ability to reconstruct inventory state from events at any point in time
+- **Database Migrations**: Schema versioning via Alembic for safe migrations
+- **Performance**: O(1) inventory reads using projection model
+---
 
-# Repository Structure
+## 🧠 Engineering Highlights
 
-ims/
+- Designed a CQRS-based system with separate write and read models
+- Implemented idempotent event handling using unique event IDs
+- Built projection-based inventory system for constant-time reads
+- Ensured transactional consistency between event log and projection
+- Developed full test suite (unit, integration, e2e)
+- Containerized system with automated migrations and reproducible setup
+- Leveraged AI-assisted development tools to accelerate debugging and design iterations
 
-app/ main.py api/ services/ models/
+---
 
-db/ migrations/ schema.sql
+## Architecture
 
-pipelines/ export_events.py transform_sales.py
+IMS follows the **CQRS (Command Query Responsibility Segregation)** pattern:
 
-data_lake/
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         WRITE PATH                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Client                                                        │
+│      ↓                                                          │
+│   POST /api/inventory/events                                    │
+│      ↓                                                          │
+│   InventoryEvent (append-only ledger)                           │
+│      ↓                                                          │
+│   Projection Update                                             │
+│      ↓                                                          │
+│   InventoryState                                                │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 
-docker/ Dockerfile docker-compose.yml
+┌─────────────────────────────────────────────────────────────────┐
+│                          READ PATH                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Client                                                        │
+│      ↓                                                          │
+│   GET /api/inventory/{product_id}                               │
+│      ↓                                                          │
+│   InventoryState (pre-computed projection)                      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-scripts/
+### Core Concepts
 
-README.md ROADMAP.md
+| Concept | Description |
+|---------|-------------|
+| **InventoryEvent** | Immutable ledger entry recording a single inventory change |
+| **InventoryState** | Current inventory snapshot, derived from events |
+| **event_id** | Client-provided unique identifier for idempotency |
+| **product_id** | Foreign key linking events to products |
 
-------------------------------------------------------------------------
+### Inventory Calculation
 
-# Development Epochs
+Inventory is NOT computed at read time.
 
-Each epoch should produce a **working system**.
+Instead:
 
-------------------------------------------------------------------------
+- Events are appended to `inventory_events`
+- A projection updates `inventory_state`
+- Reads are served from `inventory_state`
 
-# EPOCH 0 --- Foundations
+This ensures:
+- constant-time reads
+- no runtime aggregation
+- consistency with event log
 
-Goal: Run the application locally.
+---
 
-Tech stack: - Docker - PostgreSQL - FastAPI - Python
+### Projection Consistency
 
-Tasks:
+Every write operation:
 
--   Setup repository structure
--   Create docker-compose
--   Run PostgreSQL container
--   Create FastAPI app
--   Connect FastAPI to database
--   Environment configuration (.env)
+1. Inserts into `inventory_events`
+2. Updates `inventory_state` in the same transaction
 
-Result:
+This guarantees:
+- no divergence between event log and state
+- deterministic reconstruction capability
 
-docker compose up
+---
 
-should start: - API server - PostgreSQL
+## Tech Stack
 
-------------------------------------------------------------------------
+| Component | Technology |
+|-----------|------------|
+| Web Framework | FastAPI |
+| Database | PostgreSQL 15 |
+| ORM | SQLAlchemy |
+| Migrations | Alembic |
+| Validation | Pydantic |
+| Server | Uvicorn |
+| Testing | Pytest + httpx |
+| Containerization | Docker + Docker Compose |
 
-# EPOCH 1 --- Core Inventory System
+---
 
-Key Idea:
+## Project Structure
 
-Inventory is NOT stored.\
-Inventory is computed from events.
+```
+ims-manual/
+├── app/
+│   ├── __init__.py
+│   ├── main.py                       # FastAPI application entry point
+│   ├── database.py                   # SQLAlchemy engine, session, base
+│   ├── api/
+│   │   ├── products.py               # Product API routes
+│   │   └── inventory.py              # Inventory API routes
+│   ├── models/
+│   │   ├── product.py                # Product SQLAlchemy model
+│   │   ├── inventory_event.py        # InventoryEvent model
+│   │   ├── inventory_state.py        # InventoryState projection model
+│   │   └── enums.py                  # EventType enumeration
+│   ├── schemas/
+│   │   ├── product.py                # Product Pydantic schemas
+│   │   └── inventory_event.py        # InventoryEvent Pydantic schemas
+│   └── services/
+│       ├── product_service.py        # Product business logic
+│       └── inventory_service.py      # Inventory business logic
+├── migrations/
+│   ├── versions/                     # Alembic migration files
+│   ├── env.py                        # Alembic environment configuration
+│   └── README                        # Alembic documentation
+├── tests/
+│   ├── conftest.py                   # Pytest fixtures
+│   ├── test_products.py              # Product API tests
+│   ├── test_inventory.py             # Core inventory tests
+│   ├── test_inventory_validation.py  # Validation tests
+│   └── test_idempotency.py           # Idempotency tests
+├── docker/
+│   └── Dockerfile                    # API container definition
+├── docs/                             # Architecture and development notes
+├── data_lake/                        # Future: data lake storage
+├── pipelines/                        # Future: ETL pipelines
+├── docker-compose.yml                # Container orchestration
+├── Makefile                          # Development shortcuts
+├── alembic.ini                       # Alembic configuration
+├── pytest.ini                        # Pytest configuration
+├── requirements.txt                  # Python dependencies
+├── ROADMAP.md                        # Development roadmap
+└── README.md                         # This file
+```
 
-------------------------------------------------------------------------
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.11+
+- PostgreSQL 15 (or Docker)
+- Docker & Docker Compose (optional)
+
+### Local Development
+
+#### 1. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+#### 2. Set Up PostgreSQL
+
+Create a PostgreSQL database named `ims`:
+
+```sql
+CREATE DATABASE ims;
+```
+
+Set the `DATABASE_URL` environment variable:
+
+```bash
+export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/ims"
+```
+
+#### 3. Run Migrations
+
+```bash
+alembic upgrade head
+```
+
+Or use Make:
+
+```bash
+make migrate
+```
+
+#### 4. Start the Server
+
+```bash
+uvicorn app.main:app --reload
+```
+
+The API will be available at `http://localhost:8000`. API documentation is at `http://localhost:8000/docs`.
+
+### Docker Development
+
+#### Quick Start
+
+```bash
+# Start all services (PostgreSQL + API)
+make up
+
+# Or in detached mode
+make up-d
+```
+
+#### Useful Commands
+
+```bash
+make logs        # View API logs
+make migrate     # Run pending migrations
+make shell       # Get shell access to API container
+make down        # Stop services
+make reset       # Stop and remove volumes (full reset)
+make rebuild     # Rebuild and restart services
+```
+
+---
+
+## API Reference
+
+All API endpoints are prefixed with `/api`.
+
+### Products
+
+#### Create Product
+
+```http
+POST /api/products
+Content-Type: application/json
+
+{
+    "name": "Widget A",
+    "sku": "WGT-001"
+}
+```
+
+**Response** (201 Created):
+
+```json
+{
+    "id": 1,
+    "name": "Widget A",
+    "sku": "WGT-001",
+    "created_at": "2026-03-19T10:30:00Z"
+}
+```
+
+**Error** (409 Conflict) — if SKU already exists:
+
+```json
+{
+    "detail": "Product with this SKU already exists"
+}
+```
+
+---
+
+### Inventory Events
+
+#### Record Inventory Event
+
+```http
+POST /api/inventory/events
+Content-Type: application/json
+
+{
+    "product_id": 1,
+    "event_type": "PURCHASE",
+    "quantity": 100,
+    "event_id": "evt-uuid-123"
+}
+```
+
+**Request Fields**:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `product_id` | integer | Yes | ID of the product |
+| `event_type` | string | Yes | Type of event (see Event Types) |
+| `quantity` | integer | Yes | Quantity (positive for increases, must be positive for PURCHASE/SALE/DAMAGE/RETURN) |
+| `event_id` | string | Yes | Unique client-provided ID for idempotency |
+
+**Response** (201 Created):
+
+```json
+{
+    "id": 1,
+    "product_id": 1,
+    "event_type": "PURCHASE",
+    "quantity": 100,
+    "event_id": "evt-uuid-123"
+}
+```
+
+**Errors**:
+
+| Status | Condition |
+|--------|-----------|
+| 400 | Invalid quantity (zero, negative for PURCHASE/SALE) or insufficient inventory for SALE/DAMAGE |
+| 404 | Product not found |
+
+#### Get Inventory Level
+
+```http
+GET /api/inventory/{product_id}
+```
+
+**Response** (200 OK):
+
+```json
+{
+    "product_id": 1,
+    "inventory": 85
+}
+```
+
+#### Get Product Events
+
+```http
+GET /api/inventory/events/{product_id}
+```
+
+**Response** (200 OK):
+
+```json
+[
+    {
+        "id": 1,
+        "product_id": 1,
+        "event_type": "PURCHASE",
+        "quantity": 100,
+        "event_id": "evt-1"
+    },
+    {
+        "id": 2,
+        "product_id": 1,
+        "event_type": "SALE",
+        "quantity": -15,
+        "event_id": "evt-2"
+    }
+]
+```
+
+---
 
 ## Database Schema
 
-### products
+### Tables
 
-  column       type
-  ------------ -----------
-  id           serial
-  name         text
-  sku          text
-  created_at   timestamp
+#### products
 
-### inventory_events
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | SERIAL | PRIMARY KEY |
+| name | VARCHAR | NOT NULL |
+| sku | VARCHAR | UNIQUE, INDEX |
+| created_at | TIMESTAMP | DEFAULT now() |
 
-  column       type
-  ------------ -----------
-  id           serial
-  product_id   int
-  event_type   text
-  quantity     int
-  created_at   timestamp
+#### inventory_events
 
-Event types:
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | SERIAL | PRIMARY KEY |
+| event_id | VARCHAR | UNIQUE, NOT NULL |
+| product_id | INTEGER | FOREIGN KEY → products.id, NOT NULL |
+| event_type | ENUM | NOT NULL |
+| quantity | INTEGER | |
+| created_at | TIMESTAMP | DEFAULT now() |
 
-purchase\
-sale\
-adjustment\
-return
+**Indexes**:
+- `ix_inventory_events_product_id`
+- `ix_inventory_events_created_at`
+- `ix_inventory_events_product_created` (composite)
 
-Example:
+#### inventory_state
 
-  id   product_id   event_type   quantity
-  ---- ------------ ------------ ----------
-  1    1            purchase     50
-  2    1            sale         -5
+| Column | Type | Constraints |
+|--------|------|-------------|
+| product_id | INTEGER | PRIMARY KEY, FOREIGN KEY → products.id |
+| quantity | INTEGER | NOT NULL, DEFAULT 0 |
 
-Inventory = SUM(quantity)
+---
 
-------------------------------------------------------------------------
+## Event Types
 
-## API Endpoints
+| Event | Effect on Inventory | Notes |
+|-------|---------------------|-------|
+| `PURCHASE` | +quantity | Stock received from supplier |
+| `SALE` | -quantity | Protects against overselling |
+| `DAMAGE` | -quantity | Stock damaged/lost |
+| `RETURN` | +quantity | Customer returns |
+| `ADJUSTMENT` | ±quantity | Manual correction (can be positive or negative) |
 
-Products
+### Quantity Rules
 
-POST /products\
-GET /products\
-GET /products/{{id}}
+| Event Type | Quantity Must Be | Notes |
+|------------|------------------|-------|
+| PURCHASE | > 0 | Increases inventory |
+| SALE | > 0 | Decreases inventory, checks availability |
+| DAMAGE | > 0 | Decreases inventory, checks availability |
+| RETURN | > 0 | Increases inventory |
+| ADJUSTMENT | any non-zero | Manual correction |
 
-Inventory
+---
 
-POST /inventory/purchase\
-POST /inventory/sale\
-GET /inventory/{{product_id}}
+## Testing
 
-------------------------------------------------------------------------
+### Run All Tests
 
-# EPOCH 2 --- Data Export Pipeline
+```bash
+make test
+```
 
-Pipeline:
+Or directly:
 
-PostgreSQL → Python Batch Job → Parquet Dataset
+```bash
+pytest
+```
 
-Example output:
+### Run with Coverage
 
-data_lake/ inventory_events/ date=YYYY-MM-DD/ events.parquet
+```bash
+pytest --cov=app tests/
+```
 
-Tasks:
+### End-to-End Tests (Docker)
 
--   Create export_events.py
--   Read events from Postgres
--   Write Parquet files
--   Partition by date
+```bash
+make test-e2e
+```
 
-------------------------------------------------------------------------
+### Run All Tests (Unit + E2E)
 
-# EPOCH 3 --- Analytics Layer
+```bash
+make test-all
+```
 
-Create aggregated datasets.
+### Test Structure
 
-Example:
+| File | Description |
+|------|-------------|
+| `test_products.py` | Product creation and SKU uniqueness |
+| `test_inventory.py` | Core inventory flow, oversell protection |
+| `test_inventory_validation.py` | Input validation for event types |
+| `test_idempotency.py` | Duplicate event handling |
+| `conftest.py` | Shared pytest fixtures (TestClient, database) |
 
-daily_sales
+---
 
-  date   product_id   units_sold
-  ------ ------------ ------------
+## Development Workflow
 
-Generated from sales events grouped by product and date.
+### Making Schema Changes
 
-Output:
+1. Modify SQLAlchemy models in `app/models/`
+2. Generate a migration:
+   ```bash
+   alembic revision --autogenerate -m "description"
+   ```
+3. Review the generated migration file in `migrations/versions/`
+4. Apply the migration:
+   ```bash
+   alembic upgrade head
+   ```
 
-data_lake/analytics/daily_sales.parquet
+### Using Makefile
 
-------------------------------------------------------------------------
+```bash
+make up          # Start services
+make logs        # View logs
+make test        # Run tests
+make migrate     # Apply migrations
+make shell       # Shell into container
+make reset       # Full reset (destroys data)
+```
 
-# EPOCH 4 --- ML Integration
+---
 
-Inputs for ML:
+## Environment Variables
 
--   daily_sales
--   inventory_levels
--   product_metadata
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/ims` | PostgreSQL connection string |
+| `PYTHONPATH` | `/app` | Python module search path |
 
-Pipeline:
+---
 
-dataset → model training → prediction
+## Roadmap
 
-Example prediction:
+IMS is developed in epochs, evolving from a simple backend to a full data platform. See [ROADMAP.md](ROADMAP.md) for full details.
 
-next_7_day_demand
+| Epoch | Focus | Status |
+|-------|-------|--------|
+| 0 | Foundations | ✅ Complete |
+| 1 | Event-Driven Backend | In Progress |
+| 2 | Batch Data Platform | Planned |
+| 3 | Data Warehouse | Planned |
+| 4 | Streaming Platform | Planned |
+| 5 | ML Platform | Planned |
+| 6 | Application Layer | Planned |
+| 7 | Advanced Automation | Optional |
 
-------------------------------------------------------------------------
+---
 
-# Milestone 1
+## License
 
-First working milestone:
+MIT License
 
-FastAPI + PostgreSQL + inventory_events table
 
-Working endpoints:
+## Author
 
-POST /purchase\
-POST /sale\
-GET /inventory/{{product}}
-
-------------------------------------------------------------------------
-
-# Long Term Vision
-
-Inventory System ↓ Data Platform ↓ ML Pipeline ↓ Smart Inventory
-Optimization
-
+**Sinan Demir**
+Computer Science Student @ University of Texas at Dallas
