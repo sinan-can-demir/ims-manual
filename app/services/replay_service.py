@@ -1,6 +1,8 @@
 from collections import defaultdict
 from sqlalchemy.orm import Session
 
+from app.core.logging import logger
+
 from app.models.inventory_event import InventoryEvent
 from app.models.inventory_state import InventoryState
 
@@ -43,6 +45,13 @@ def rebuild_inventory_state(db: Session) -> dict:
 
     # Commit the transaction to save changes
     db.commit()
+    logger.info(
+        "inventory_replay_completed",
+        extra={
+            "events_processed": len(events),
+            "products_rebuilt": len(rebuilt_rows)
+        }
+    )
 
     # Return summary of the rebuild process
     return {

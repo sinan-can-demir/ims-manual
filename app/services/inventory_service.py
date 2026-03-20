@@ -7,6 +7,7 @@ from app.models.inventory_event import InventoryEvent
 from app.models.inventory_state import InventoryState
 from app.models.product import Product
 
+from app.core.logging import logger
 
 def normalize_quantity(event_type: EventType, quantity: int) -> int:
     if quantity == 0:
@@ -57,6 +58,10 @@ def record_event(
         .first()
     )
     if existing_event:
+        logger.info(
+            "inventory_event_duplicate",
+            extra={"event_id": event_id}
+        )
         return existing_event
 
     # Normalize quantity based on event type
@@ -84,6 +89,16 @@ def record_event(
         # Calculate new inventory level
         new_quantity = state.quantity + delta
         if new_quantity < 0 and event_type in [EventType.SALE, EventType.DAMAGE]:
+            
+            logger.warning(
+                "inventory_oversell_blocked",
+                extra={
+                "product_id": product_id,
+                "attempted_quantity": delta,
+                "current_quantity": state.quantity
+                }
+            )
+            
             raise HTTPException(status_code=400, detail="Insufficient inventory")
 
         # Record the event
@@ -103,11 +118,27 @@ def record_event(
         # Commit transaction
         db.commit()
         db.refresh(event)
+
+        logger.info(
+            "inventory_event_created",
+            extra={
+                "product_id": product_id,
+                "event_type": event_type.value,
+                "quantity": delta,
+                "event_id": event_id
+            }
+        )
+
         return event
 
     except IntegrityError:
         db.rollback()
 
+        logger.warning(
+            "inventory_event_integrity_error",
+            extra={"event_id": event_id}
+        )
+        
         # Check if the failure was due to a duplicate event_id (idempotency)
         existing_event = (
             db.query(InventoryEvent)
