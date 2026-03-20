@@ -4,8 +4,11 @@ from app.models.product import Product
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
 
-def create_product(db: Session, product: ProductCreate):
-    new_product = Product(name=product.name, sku=product.sku)
+def create_product(db: Session, product: ProductCreate) -> Product:
+    new_product = Product(
+        name=product.name,
+        sku=product.sku
+    )
 
     try:
         db.add(new_product)
