@@ -1,7 +1,7 @@
 # 📦 IMS — Inventory Hardening Debug Checklist (3/18/2026)
 
 > **Last reviewed:** 3/19/2026
-> **Overall progress:** ~60% complete (Phase 1: ✅ 100%, Phase 2: ✅ 80%, Phase 3: ⏳ 20%, Bonus: ✅ 50%)
+> **Overall progress:** ~75% complete (Phase 1: ✅ 100%, Phase 2: ✅ 80%, Phase 3: ⏳ 60%, Bonus: ✅ 60%)
 
 ## 🔴 PHASE 1 — CRITICAL CORRECTNESS (MUST FIX FIRST)
 
@@ -120,12 +120,12 @@ READ:
 
 ### 🔐 Concurrency-Safe Oversell Protection
 
-* [ ] Wrap inventory operation in DB transaction
-* [ ] Use `SELECT ... FOR UPDATE` on `inventory_state`
-* [ ] Lock row before checking quantity
-* [ ] Re-check available stock inside transaction
-* [ ] Update quantity atomically
-* [ ] Commit transaction
+* [✔] Wrap inventory operation in DB transaction
+* [✔] Use `SELECT ... FOR UPDATE` on `inventory_state`
+* [✔] Lock row before checking quantity
+* [✔] Re-check available stock inside transaction
+* [✔] Update quantity atomically
+* [✔] Commit transaction
 * [ ] Add test (later or simulated):
 
   * [ ] concurrent sales do not oversell
@@ -160,12 +160,12 @@ Refactored record_event function is constructured as following:
 
 ### 📤 Response Models (API CONTRACT)
 
-* [ ] Add `response_model=` to:
+* [✔] Add `response_model=` to:
 
-  * [ ] POST /products
-  * [ ] POST /inventory/events
-  * [ ] GET /inventory/{product_id}
-* [ ] Ensure schemas match actual DB output
+  * [✔] POST /products
+  * [✔] POST /inventory/events
+  * [✔] GET /inventory/{product_id}
+* [✔] Ensure schemas match actual DB output
 * [✔] Set correct status codes:
 
   * [✔] POST /products → 201
@@ -175,9 +175,9 @@ Refactored record_event function is constructured as following:
 
 ### 📜 Deterministic Event Listing
 
-* [ ] Add ordering:
+* [✔] Add ordering:
 
-  * [ ] `ORDER BY created_at ASC, id ASC`
+  * [✔] `ORDER BY created_at ASC, id ASC`
 * [ ] Add pagination params:
 
   * [ ] `limit`
