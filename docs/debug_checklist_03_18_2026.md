@@ -130,6 +130,20 @@ READ:
 
   * [ ] concurrent sales do not oversell
 
+Refactored record_event function is constructured as following:
+
+```bash
+1. Check duplicate (idempotency)
+2. Normalize quantity → delta
+3. Validate product exists
+4. Lock inventory row (CRITICAL)
+5. Compute new quantity
+6. Validate (no oversell)
+7. Insert event
+8. Update projection
+9. Commit transaction
+```
+
 ---
 
 ### 🧱 Clean Service Boundaries

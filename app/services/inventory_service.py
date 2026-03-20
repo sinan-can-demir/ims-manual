@@ -1,121 +1,123 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import func
-from sqlalchemy.exc import IntegrityError
-
 from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
+from app.models.enums import EventType
 from app.models.inventory_event import InventoryEvent
 from app.models.inventory_state import InventoryState
 from app.models.product import Product
-from app.models.enums import EventType
-
 
 
 def normalize_quantity(event_type: EventType, quantity: int) -> int:
-    # Zero quantity doesn't make sense for any event type, so we reject it
     if quantity == 0:
-        raise HTTPException(status_code=400, detail="Quantity must not be zero")
+        raise HTTPException(status_code=400, detail="Quantity cannot be zero")
 
-    # For PURCHASE and RETURN, quantity is added to inventory, so we return it as is
-    if event_type in {EventType.PURCHASE, EventType.RETURN}:
+    if event_type in [EventType.PURCHASE, EventType.RETURN]:
         if quantity < 0:
-            raise HTTPException(status_code=400, detail="Quantity must be positive")
+            raise HTTPException(
+                status_code=400,
+                detail=f"{event_type.value} quantity must be positive",
+            )
         return quantity
 
-    
-    if event_type in {EventType.SALE, EventType.DAMAGE}:
+    if event_type in [EventType.SALE, EventType.DAMAGE]:
         if quantity < 0:
-            raise HTTPException(status_code=400, detail="Quantity must be positive")
+            raise HTTPException(
+                status_code=400,
+                detail=f"{event_type.value} quantity must be positive",
+            )
         return -quantity
 
     if event_type == EventType.ADJUSTMENT:
         return quantity
 
-    raise HTTPException(status_code=400, detail="Invalid event type")
+    raise HTTPException(status_code=400, detail="Unsupported event type")
+
+
+def get_inventory(db: Session, product_id: int) -> int:
+    state = (
+        db.query(InventoryState)
+        .filter(InventoryState.product_id == product_id)
+        .first()
+    )
+    return state.quantity if state else 0
+
 
 def record_event(
     db: Session,
     product_id: int,
     event_type: EventType,
     quantity: int,
-    event_id: str
-):
-    # 🔁 Idempotency check
-    existing = (
+    event_id: str,
+) -> InventoryEvent:
+    # Check for existing event with same event_id for idempotency
+    existing_event = (
         db.query(InventoryEvent)
         .filter(InventoryEvent.event_id == event_id)
         .first()
     )
+    if existing_event:
+        return existing_event
 
-    # If event with same event_id already exists, return it (idempotent)
-    if existing:
-        return existing
+    # Normalize quantity based on event type
+    delta = normalize_quantity(event_type, quantity)
 
+    # Validate product existence
     product = db.query(Product).filter(Product.id == product_id).first()
-
-    # 404 if product doesn't exist
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    state = db.query(InventoryState).filter(
-        InventoryState.product_id == product_id
-    ).first()
-
-    delta = normalize_quantity(event_type, quantity)
-
-    current_inventory = state.quantity if state else 0
-
-    if event_type in {EventType.SALE, EventType.DAMAGE}:
-        if abs(delta) > current_inventory:
-            raise HTTPException(status_code=400, detail="Not enough inventory")
-
-    event = InventoryEvent(
-        product_id=product_id,
-        event_type=event_type,
-        quantity=delta,
-        event_id=event_id
-    )
-
-    if not state:
-        state = InventoryState(product_id=product_id, quantity=0)
-        db.add(state)
-
-    state.quantity += delta
-
     try:
+        # Lock inventory state row for update or create if not exists
+        state = (
+            db.query(InventoryState)
+            .filter(InventoryState.product_id == product_id)
+            .with_for_update()      # Lock the row
+            .first()
+        )
+
+        if state is None:
+            state = InventoryState(product_id=product_id, quantity=0)
+            db.add(state)
+            db.flush()
+
+        # Calculate new inventory level
+        new_quantity = state.quantity + delta
+        if new_quantity < 0 and event_type in [EventType.SALE, EventType.DAMAGE]:
+            raise HTTPException(status_code=400, detail="Insufficient inventory")
+
+        # Record the event
+        event = InventoryEvent(
+            product_id=product_id,
+            event_type=event_type,
+            quantity=delta,
+            event_id=event_id,
+        )
+
+        # Add event and update inventory state atomically
         db.add(event)
+
+        # Update inventory state
+        state.quantity = new_quantity
+
+        # Commit transaction
         db.commit()
         db.refresh(event)
+        return event
 
     except IntegrityError:
         db.rollback()
 
-        existing = (
+        # Check if the failure was due to a duplicate event_id (idempotency)
+        existing_event = (
             db.query(InventoryEvent)
             .filter(InventoryEvent.event_id == event_id)
             .first()
         )
 
-        # If another transaction inserted the same event_id, return that (idempotent)
-        if existing:
-            return existing
+        # If the event already exists, return it instead of raising an error
+        if existing_event:
+            return existing_event
 
-        # If we get here, it means the IntegrityError was due to something else, so we 
-        # raise it to be handled by the global exception handler (500 error)
+        # If the event doesn't exist, it means the failure was due to another reason (e.g., database error)
         raise
-
-    return event
-
-
-def get_inventory(db: Session, product_id: int):
-
-    state = (
-        db.query(InventoryState)
-        .filter(InventoryState.product_id == product_id)
-        .first()
-    )
-
-    if not state:
-        return 0
-
-    return state.quantity
