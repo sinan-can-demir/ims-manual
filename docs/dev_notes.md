@@ -585,3 +585,16 @@ Todays Milestone: Complete!
 ## 3/19/2026
 
 I decided to use in memory test DB because it will reset each time when we run the test and then remove it.
+
+Today, we added concurrency safety, event replay features. 
+
+Concurrency safety will ensure that two different transaction cannot be made on the same row. It is critical to keep data consistent.
+
+Event replay will help with:
+
+- Reconstructuring projection
+- Testing/Debugging
+- Replication: (in distributed systems)
+- Auditing
+
+These are essential for data analytics and development operations.

@@ -1,6 +1,7 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
+model_config = ConfigDict(from_attributes=True)
 
 class ProductCreate(BaseModel):
     name: str
@@ -12,6 +13,3 @@ class ProductResponse(BaseModel):
     name: str
     sku: str
     created_at: datetime
-
-    class Config:
-        from_attributes = True

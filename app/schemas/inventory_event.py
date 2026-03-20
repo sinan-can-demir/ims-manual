@@ -1,6 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from app.models.enums import EventType
+
+model_config = ConfigDict(from_attributes=True)
 
 
 class InventoryEventCreate(BaseModel):
@@ -16,6 +18,3 @@ class InventoryEventResponse(BaseModel):
     quantity: int
     event_id: str
     created_at: datetime
-
-    class Config:
-        from_attributes = True
