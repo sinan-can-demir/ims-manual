@@ -7,6 +7,7 @@ from app.schemas.inventory_event import (
     InventoryEventCreate,
     InventoryEventResponse
 )
+from app.services.replay_service import rebuild_inventory_state
 from app.schemas.inventory_state import InventoryStateResponse
 from app.services.inventory_service import record_event, get_inventory
 
@@ -26,6 +27,9 @@ def create_inventory_event(
         event.event_id
     )
 
+@router.post("/replay")
+def replay_inventory_projection(db: Session = Depends(get_db)):
+    return rebuild_inventory_state(db)
 
 @router.get("/{product_id}", response_model=InventoryStateResponse)
 def inventory_level(product_id: int, db: Session = Depends(get_db)):
