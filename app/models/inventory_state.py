@@ -1,3 +1,5 @@
+# models/inventory_state.py
+
 from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 

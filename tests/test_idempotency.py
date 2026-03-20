@@ -21,4 +21,4 @@ def test_idempotent_event(client):
     # Inventory should still be 50 (not 100)
     response = client.get(f"/api/inventory/{product_id}")
 
-    assert response.json()["inventory"] == 50
+    assert response.json()["quantity"] == 50

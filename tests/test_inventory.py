@@ -25,7 +25,7 @@ def test_inventory_flow(client):
     response = client.get(f"/api/inventory/{product_id}")
 
     assert response.status_code == 200
-    assert response.json()["inventory"] == 40
+    assert response.json()["quantity"] == 40
 
 
 def test_oversell_protection(client):
@@ -63,4 +63,4 @@ def test_projection_consistency(client):
 
     response = client.get(f"/api/inventory/{pid}")
 
-    assert response.json()["inventory"] == 15
+    assert response.json()["quantity"] == 15
