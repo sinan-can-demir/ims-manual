@@ -54,3 +54,6 @@ test.db
 
 # Local settings
 local_settings.py
+
+# parquet files
+*.parquet
