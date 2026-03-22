@@ -26,18 +26,6 @@ def test_purchase_negative_quantity_fails(client):
 
     assert response.status_code == 400
 
-def test_purchase_negative_quantity_fails(client):
-    product = create_product(client)
-
-    response = client.post("/api/inventory/events", json={
-        "product_id": product["id"],
-        "event_type": "PURCHASE",
-        "quantity": -3,
-        "event_id": "evt-neg-purchase"
-    })
-
-    assert response.status_code == 400
-
 def test_adjustment_negative_allowed(client):
     product = create_product(client)
 
