@@ -10,6 +10,8 @@ from app.schemas.inventory_event import (
 from app.services.replay_service import rebuild_inventory_state
 from app.schemas.inventory_state import InventoryStateResponse
 from app.services.inventory_service import record_event, get_inventory
+from app.schemas.export import ExportMetadata
+from app.services.export_service import export_inventory_events
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
@@ -50,3 +52,7 @@ def get_product_events(product_id: int, db: Session = Depends(get_db)):
     )
 
     return events
+
+@router.post("/export", response_model=ExportMetadata)
+def export_inventory(db: Session = Depends(get_db)):
+    return export_inventory_events(db, incremental=True)

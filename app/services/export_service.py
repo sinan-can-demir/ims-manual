@@ -1,0 +1,191 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+import pandas as pd
+from sqlalchemy import and_, or_
+from sqlalchemy.orm import Session
+
+from app.config import INVENTORY_EVENTS_ROOT, CHECKPOINT_FILE
+from app.core.logging import logger
+from app.models.inventory_event import InventoryEvent
+
+
+CHECKPOINT_KEY = "inventory_events"
+
+
+def _ensure_directories() -> None:
+    INVENTORY_EVENTS_ROOT.mkdir(parents=True, exist_ok=True)
+    CHECKPOINT_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+
+def _load_checkpoints() -> dict[str, Any]:
+    _ensure_directories()
+
+    if not CHECKPOINT_FILE.exists():
+        return {}
+
+    with CHECKPOINT_FILE.open("r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _save_checkpoints(checkpoints: dict[str, Any]) -> None:
+    _ensure_directories()
+
+    with CHECKPOINT_FILE.open("w", encoding="utf-8") as f:
+        json.dump(checkpoints, f, indent=2)
+
+
+def _get_checkpoint() -> dict[str, Any] | None:
+    checkpoints = _load_checkpoints()
+    return checkpoints.get(CHECKPOINT_KEY)
+
+
+def _update_checkpoint(last_created_at: str, last_id: int) -> None:
+    checkpoints = _load_checkpoints()
+    checkpoints[CHECKPOINT_KEY] = {
+        "last_created_at": last_created_at,
+        "last_id": last_id,
+    }
+    _save_checkpoints(checkpoints)
+
+
+def _build_base_query(db: Session):
+    return (
+        db.query(
+            InventoryEvent.id,
+            InventoryEvent.event_id,
+            InventoryEvent.product_id,
+            InventoryEvent.event_type,
+            InventoryEvent.quantity,
+            InventoryEvent.created_at,
+        )
+        .order_by(InventoryEvent.created_at.asc(), InventoryEvent.id.asc())
+    )
+
+
+def _apply_incremental_filter(query, checkpoint: dict[str, Any] | None):
+    if not checkpoint:
+        return query
+
+    last_created_at = pd.Timestamp(checkpoint["last_created_at"]).to_pydatetime()
+    last_id = checkpoint["last_id"]
+
+    return query.filter(
+        or_(
+            InventoryEvent.created_at > last_created_at,
+            and_(
+                InventoryEvent.created_at == last_created_at,
+                InventoryEvent.id > last_id,
+            ),
+        )
+    )
+
+
+def _rows_to_dataframe(rows: list[tuple]) -> pd.DataFrame:
+    df = pd.DataFrame(
+        rows,
+        columns=[
+            "id",
+            "event_id",
+            "product_id",
+            "event_type",
+            "quantity",
+            "created_at",
+        ],
+    )
+
+    if df.empty:
+        return df
+
+    df["event_type"] = df["event_type"].astype(str)
+    df["created_at"] = pd.to_datetime(df["created_at"], utc=True)
+
+    df["year"] = df["created_at"].dt.strftime("%Y")
+    df["month"] = df["created_at"].dt.strftime("%m")
+    df["day"] = df["created_at"].dt.strftime("%d")
+
+    return df
+
+
+def _write_partitioned_parquet(df: pd.DataFrame) -> tuple[int, int]:
+    if df.empty:
+        return 0, 0
+
+    partitions_written = 0
+    files_written = 0
+
+    grouped = df.groupby(["year", "month", "day"], sort=True)
+
+    for (year, month, day), partition_df in grouped:
+        partition_path = (
+            INVENTORY_EVENTS_ROOT
+            / f"year={year}"
+            / f"month={month}"
+            / f"day={day}"
+        )
+        partition_path.mkdir(parents=True, exist_ok=True)
+
+        start_id = int(partition_df["id"].min())
+        end_id = int(partition_df["id"].max())
+
+        file_path = partition_path / f"inventory_events_start_{start_id}_end_{end_id}.parquet"
+
+        write_df = (
+            partition_df[
+                ["id", "event_id", "product_id", "event_type", "quantity", "created_at"]
+            ]
+            .sort_values(["created_at", "id"])
+            .reset_index(drop=True)
+        )
+
+        write_df.to_parquet(file_path, index=False)
+
+        partitions_written += 1
+        files_written += 1
+
+    return partitions_written, files_written
+
+
+def export_inventory_events(db: Session, incremental: bool = True) -> dict[str, Any]:
+    logger.info("inventory_export_started")
+
+    checkpoint = _get_checkpoint() if incremental else None
+
+    query = _build_base_query(db)
+    query = _apply_incremental_filter(query, checkpoint)
+    rows = query.all()
+
+    df = _rows_to_dataframe(rows)
+
+    if df.empty:
+        logger.info("inventory_export_empty")
+        return {
+            "rows_exported": 0,
+            "partitions_written": 0,
+            "files_written": 0,
+            "mode": "incremental" if incremental else "full",
+            "checkpoint_updated": False,
+        }
+
+    partitions_written, files_written = _write_partitioned_parquet(df)
+
+    last_row = df.sort_values(["created_at", "id"]).iloc[-1]
+    _update_checkpoint(
+        last_created_at=last_row["created_at"].isoformat(),
+        last_id=int(last_row["id"]),
+    )
+
+    logger.info(
+        f"inventory_export_completed rows={len(df)} partitions={partitions_written} files={files_written}"
+    )
+
+    return {
+        "rows_exported": int(len(df)),
+        "partitions_written": partitions_written,
+        "files_written": files_written,
+        "mode": "incremental" if incremental else "full",
+        "checkpoint_updated": True,
+    }

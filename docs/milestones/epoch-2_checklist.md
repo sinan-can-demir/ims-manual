@@ -13,7 +13,7 @@ Turn your event system into a reproducible, scalable data pipeline
 - [X] Create `data_lake/` directory
 - [X] Create `inventory_events/` subfolder
 - [X] Ensure `.gitignore` excludes parquet files
-- [ ] Add README for data_lake structure
+- [X] Add README for data_lake structure
 
 ### Expected Structure
 
