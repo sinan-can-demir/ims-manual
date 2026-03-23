@@ -170,17 +170,17 @@ def export_inventory_events(db: Session, incremental: bool = True) -> dict[str, 
             "checkpoint_updated": False,
         }
 
-    partitions_written, files_written = _write_partitioned_parquet(df)
+    try:
+        partitions_written, files_written = _write_partitioned_parquet(df)
 
-    last_row = df.sort_values(["created_at", "id"]).iloc[-1]
-    _update_checkpoint(
-        last_created_at=last_row["created_at"].isoformat(),
-        last_id=int(last_row["id"]),
-    )
-
-    logger.info(
-        f"inventory_export_completed rows={len(df)} partitions={partitions_written} files={files_written}"
-    )
+        last_row = df.sort_values(["created_at", "id"]).iloc[-1]
+        _update_checkpoint(
+            last_created_at=last_row["created_at"].isoformat(),
+            last_id=int(last_row["id"]),
+        )
+    except Exception:
+        logger.exception("inventory_export_failed")
+        raise
 
     return {
         "rows_exported": int(len(df)),
