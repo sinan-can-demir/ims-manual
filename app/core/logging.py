@@ -12,7 +12,7 @@ def setup_logger():
 
     # define a log format
     formatter = logging.Formatter(
-        '%(asctime)s | %(levelname)s | %(name)s | %(message)s | %(product_id)s %(event_type)s %(quantity)s %(event_id)s'
+        "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
     )
 
     # set the formatter for the handler and add the handler to the logger
