@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pandas as pd
 from sqlalchemy.orm import Session
 
@@ -11,9 +9,11 @@ from app.models.inventory_event import InventoryEvent
 def validate_exports(db: Session) -> dict:
     parquet_files = list(INVENTORY_EVENTS_ROOT.rglob("*.parquet"))
 
+    db_count = db.query(InventoryEvent).count()
+
     if not parquet_files:
         return {
-            "db_rows": 0,
+            "db_rows": db_count,
             "parquet_rows": 0,
             "duplicate_event_ids": 0,
             "schema_valid": True,
@@ -22,7 +22,6 @@ def validate_exports(db: Session) -> dict:
     frames = [pd.read_parquet(path) for path in parquet_files]
     df = pd.concat(frames, ignore_index=True)
 
-    db_count = db.query(InventoryEvent).count()
     duplicate_event_ids = int(df["event_id"].duplicated().sum())
 
     expected_columns = {
@@ -34,11 +33,14 @@ def validate_exports(db: Session) -> dict:
         "created_at",
     }
 
+    schema_valid = set(df.columns) == expected_columns
+
     return {
         "db_rows": db_count,
         "parquet_rows": int(len(df)),
+        "row_count_match": db_count == len(df),
         "duplicate_event_ids": duplicate_event_ids,
-        "schema_valid": set(df.columns) == expected_columns,
+        "schema_valid": schema_valid,
     }
 
 
