@@ -104,7 +104,7 @@ Fixing this in the service is the right approach — not in the tests.
 
 #### Tests to write:
 
-- [ ] **Full export creates files**
+- [X] **Full export creates files**
   - Create a product, add 2 events, call `export_inventory_events(db, incremental=False)`
   - Assert parquet files exist in `data_lake/inventory_events/`
   - Assert returned metadata: `rows_exported == 2`, `files_written >= 1`
