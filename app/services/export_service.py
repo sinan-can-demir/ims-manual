@@ -43,14 +43,12 @@ def _get_checkpoint() -> dict[str, Any] | None:
     return checkpoints.get(CHECKPOINT_KEY)
 
 
-def _update_checkpoint(last_created_at: str, last_id: int) -> None:
+def _update_checkpoint(last_id: int) -> None:
     checkpoints = _load_checkpoints()
     checkpoints[CHECKPOINT_KEY] = {
-        "last_created_at": last_created_at,
         "last_id": last_id,
     }
     _save_checkpoints(checkpoints)
-
 
 def _build_base_query(db: Session):
     return (
@@ -66,22 +64,12 @@ def _build_base_query(db: Session):
     )
 
 
-def _apply_incremental_filter(query, checkpoint: dict[str, Any] | None):
+def _apply_incremental_filter(query, checkpoint: dict | None):
     if not checkpoint:
         return query
-
-    last_created_at = pd.Timestamp(checkpoint["last_created_at"]).to_pydatetime()
+ 
     last_id = checkpoint["last_id"]
-
-    return query.filter(
-        or_(
-            InventoryEvent.created_at > last_created_at,
-            and_(
-                InventoryEvent.created_at == last_created_at,
-                InventoryEvent.id > last_id,
-            ),
-        )
-    )
+    return query.filter(InventoryEvent.id > last_id)
 
 
 def _rows_to_dataframe(rows: list[tuple]) -> pd.DataFrame:
@@ -174,10 +162,7 @@ def export_inventory_events(db: Session, incremental: bool = True) -> dict[str, 
         partitions_written, files_written = _write_partitioned_parquet(df)
 
         last_row = df.sort_values(["created_at", "id"]).iloc[-1]
-        _update_checkpoint(
-            last_created_at=last_row["created_at"].isoformat(),
-            last_id=int(last_row["id"]),
-        )
+        _update_checkpoint(last_id=int(last_row["id"]))
     except Exception:
         logger.exception("inventory_export_failed")
         raise
