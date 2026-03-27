@@ -31,10 +31,10 @@ data_lake/
 
 ### Core Export
 
-- [ ] Create `export_service.py`
-- [ ] Query events ordered by `(created_at, id)`
-- [ ] Convert to pandas DataFrame
-- [ ] Write `.parquet` file
+- [X] Create `export_service.py`
+- [X] Query events ordered by `(created_at, id)`
+- [X] Convert to pandas DataFrame
+- [X] Write `.parquet` file
 
 ### Partitioning
 

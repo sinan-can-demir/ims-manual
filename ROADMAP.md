@@ -62,12 +62,12 @@ Goal: Build a robust, production-hardened event-driven inventory system.
 [x] README accurate and synced with actual endpoints
 
 In Progress / Remaining:
-[ ] Pagination on event listing endpoint (limit, offset params)
+[X] Pagination on event listing endpoint (limit, offset params)
 [ ] Test: concurrent sales do not oversell (requires threads or async simulation)
 [ ] Test: return → damage sequence
 [ ] Test: large adjustment edge cases
 [ ] Refactor: remove ORM object creation from product route (minor cleanup)
-[ ] Structured logging: JSON format output (currently plain text)
+[X] Structured logging: JSON format output (currently plain text)
 [ ] Correlation / request IDs in logs
 
 
@@ -103,10 +103,10 @@ CLI Script:
 [x] python app/scripts/export_events.py (runs incremental export)
 
 Remaining:
-[ ] pytest tests for export service (file creation, partition structure, incremental logic)
+[X] pytest tests for export service (file creation, partition structure, incremental logic)
 [ ] Logging: log export start, completion, rows exported, partition counts
-[ ] Handle timezone-naive datetimes from SQLite during testing (test environment gap)
-[ ] Make export idempotent (re-running same export does not duplicate rows in parquet)
+[X] Handle timezone-naive datetimes from SQLite during testing (test environment gap)
+[X] Make export idempotent (re-running same export does not duplicate rows in parquet)
 [ ] Makefile target: make export
 
 Milestone Definition (Epoch 2 COMPLETE when):

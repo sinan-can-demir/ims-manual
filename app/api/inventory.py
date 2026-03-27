@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -42,12 +42,18 @@ def inventory_level(product_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/events/{product_id}", response_model=list[InventoryEventResponse])
-def get_product_events(product_id: int, db: Session = Depends(get_db)):
-
+def get_product_events(
+    product_id: int,
+    limit: int = Query(default=50, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+):
     events = (
         db.query(InventoryEvent)
         .filter(InventoryEvent.product_id == product_id)
         .order_by(InventoryEvent.created_at.asc(), InventoryEvent.id.asc())
+        .offset(offset)
+        .limit(limit)
         .all()
     )
 

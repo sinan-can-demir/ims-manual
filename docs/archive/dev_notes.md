@@ -598,3 +598,18 @@ Event replay will help with:
 - Auditing
 
 These are essential for data analytics and development operations.
+
+
+## 3/26/2026
+
+I added tests for export functions. All of the passed except the following:
+
+```bash
+FAILED tests/test_export.py::test_incremental_export_only_new_events - AssertionError: Expected 1 new row, got 0
+```
+
+It doesn'y get a parameter as intended. I think it is a timestamp mismatch between postgresql and sqllite.
+
+I made the changes in export service and then it got fixed. (lines 46/68-71/164)
+
+The export pipeline now has full test coverage.

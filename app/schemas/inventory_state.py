@@ -2,9 +2,7 @@
 
 from pydantic import BaseModel, ConfigDict
 
-model_config = ConfigDict(from_attributes=True)
-
-
 class InventoryStateResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     product_id: int
     quantity: int
