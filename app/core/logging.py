@@ -1,6 +1,8 @@
 import logging
 import sys
 
+from pythonjsonlogger.json import JsonFormatter
+
 
 def setup_logger():
     # create a logger for the inventory management system
@@ -11,9 +13,7 @@ def setup_logger():
     handler = logging.StreamHandler(sys.stdout)
 
     # define a log format
-    formatter = logging.Formatter(
-        "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
-    )
+    formatter = JsonFormatter("%(asctime)s %(levelname)s %(name)s %(message)s")
 
     # set the formatter for the handler and add the handler to the logger
     handler.setFormatter(formatter)
