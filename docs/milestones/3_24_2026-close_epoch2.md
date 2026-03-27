@@ -109,23 +109,23 @@ Fixing this in the service is the right approach — not in the tests.
   - Assert parquet files exist in `data_lake/inventory_events/`
   - Assert returned metadata: `rows_exported == 2`, `files_written >= 1`
 
-- [ ] **Partition structure is correct**
+- [X] **Partition structure is correct**
   - After export, assert directory structure contains `year=`, `month=`, `day=` folders
 
-- [ ] **Schema columns are correct**
+- [X] **Schema columns are correct**
   - Load the parquet file with pandas
   - Assert columns match: `id, event_id, product_id, event_type, quantity, created_at`
 
-- [ ] **Incremental export only exports new events**
+- [X] **Incremental export only exports new events**
   - Export once (2 events) → assert checkpoint written
   - Add 1 more event → export again with `incremental=True`
   - Assert second export: `rows_exported == 1`
 
-- [ ] **Re-running incremental does not duplicate rows**
+- [X] **Re-running incremental does not duplicate rows**
   - Export once → export again without new events
   - Assert second export: `rows_exported == 0`, `checkpoint_updated == False`
 
-- [ ] **Empty export is handled gracefully**
+- [X] **Empty export is handled gracefully**
   - Call export with no events in DB
   - Assert: `rows_exported == 0`, no files written, no crash
 
