@@ -31,6 +31,12 @@ migrate:
 	docker compose exec api alembic upgrade head
 
 # -------------------------
+# Export events
+# -------------------------
+export:
+	python -m app.scripts.export_events
+
+# -------------------------
 # Shell access
 # -------------------------
 shell:

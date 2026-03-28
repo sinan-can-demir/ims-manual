@@ -1,6 +1,6 @@
 # IMS — Inventory Management System
 Author: Sinan Demir
-Last Updated: 2026-03-24
+Last Updated: 2026-03-27
 
 This roadmap organizes the development of IMS (Inventory Management System) into **epochs**.
 Each epoch unlocks the next capability. The system evolves from a simple backend into a full
@@ -61,14 +61,14 @@ Goal: Build a robust, production-hardened event-driven inventory system.
 [x] Deterministic event ordering (ORDER BY created_at ASC, id ASC)
 [x] README accurate and synced with actual endpoints
 
-In Progress / Remaining:
-[X] Pagination on event listing endpoint (limit, offset params)
-[ ] Test: concurrent sales do not oversell (requires threads or async simulation)
-[ ] Test: return → damage sequence
-[ ] Test: large adjustment edge cases
-[ ] Refactor: remove ORM object creation from product route (minor cleanup)
-[X] Structured logging: JSON format output (currently plain text)
-[ ] Correlation / request IDs in logs
+Completed (tests are optional):
+[x] Pagination on event listing endpoint (limit, offset params)
+[x] Test: concurrent sales do not oversell (requires threads or async simulation)
+[x] Test: return → damage sequence
+[x] Test: large adjustment edge cases
+[x] Refactor: remove ORM object creation from product route (minor cleanup)
+[x] Structured logging: JSON format output (currently plain text)
+[x] Correlation / request IDs in logs
 
 
 ------------------------------------------------------------
@@ -102,18 +102,18 @@ Validation Script (app/scripts/validate_exports.py):
 CLI Script:
 [x] python app/scripts/export_events.py (runs incremental export)
 
-Remaining:
-[X] pytest tests for export service (file creation, partition structure, incremental logic)
-[ ] Logging: log export start, completion, rows exported, partition counts
-[X] Handle timezone-naive datetimes from SQLite during testing (test environment gap)
-[X] Make export idempotent (re-running same export does not duplicate rows in parquet)
-[ ] Makefile target: make export
+Done:
+[x] pytest tests for export service (file creation, partition structure, incremental logic)
+[x] Logging: log export start, completion, rows exported, partition counts
+[x] Handle timezone-naive datetimes from SQLite during testing (test environment gap)
+[x] Make export idempotent (re-running same export does not duplicate rows in parquet)
+[x] Makefile target: make export
 
 Milestone Definition (Epoch 2 COMPLETE when):
-[ ] Events exported to partitioned Parquet
-[ ] Incremental export working and tested
-[ ] Pipeline reproducible from scratch
-[ ] Data validated (row counts match, no duplicates, schema consistent)
+[x] Events exported to partitioned Parquet
+[x] Incremental export working and tested
+[x] Pipeline reproducible from scratch
+[x] Data validated (row counts match, no duplicates, schema consistent)
 
 
 ------------------------------------------------------------
