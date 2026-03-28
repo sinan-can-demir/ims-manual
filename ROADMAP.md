@@ -69,6 +69,14 @@ Completed (tests are optional):
 [x] Refactor: remove ORM object creation from product route (minor cleanup)
 [x] Structured logging: JSON format output (currently plain text)
 [x] Correlation / request IDs in logs
+In Progress / Remaining:
+[X] Pagination on event listing endpoint (limit, offset params)
+[X] Test: concurrent sales do not oversell (requires threads or async simulation)
+[X] Test: return → damage sequence
+[X] Test: large adjustment edge cases
+[X] Refactor: remove ORM object creation from product route (minor cleanup)
+[X] Structured logging: JSON format output (currently plain text)
+[X] Correlation / request IDs in logs
 
 
 ------------------------------------------------------------
@@ -102,12 +110,12 @@ Validation Script (app/scripts/validate_exports.py):
 CLI Script:
 [x] python app/scripts/export_events.py (runs incremental export)
 
-Done:
-[x] pytest tests for export service (file creation, partition structure, incremental logic)
-[x] Logging: log export start, completion, rows exported, partition counts
-[x] Handle timezone-naive datetimes from SQLite during testing (test environment gap)
-[x] Make export idempotent (re-running same export does not duplicate rows in parquet)
-[x] Makefile target: make export
+Remaining:
+[X] pytest tests for export service (file creation, partition structure, incremental logic)
+[X] Logging: log export start, completion, rows exported, partition counts
+[X] Handle timezone-naive datetimes from SQLite during testing (test environment gap)
+[X] Make export idempotent (re-running same export does not duplicate rows in parquet)
+[X] Makefile target: make export
 
 Milestone Definition (Epoch 2 COMPLETE when):
 [x] Events exported to partitioned Parquet
