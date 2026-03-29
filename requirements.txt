@@ -10,3 +10,4 @@ pytest-asyncio
 pandas
 pyarrow
 python-json-logger
+duckdb

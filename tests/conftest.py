@@ -3,6 +3,7 @@
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from unittest.mock import patch
 
 from app.database import Base, get_db
 from app.main import app
@@ -53,3 +54,20 @@ def client(db):
     app.dependency_overrides[get_db] = override_get_db
 
     return TestClient(app)
+
+
+@pytest.fixture
+def export_paths(tmp_path):
+    events_root = tmp_path / "inventory_events"
+    checkpoint = tmp_path / "checkpoints.json"
+    with patch("app.services.export_service.INVENTORY_EVENTS_ROOT", events_root), \
+         patch("app.services.export_service.CHECKPOINT_FILE", checkpoint):
+        yield events_root, checkpoint
+
+@pytest.fixture
+def warehouse_paths(tmp_path):
+    warehouse_root = tmp_path / "warehouse"
+    events_root = tmp_path / "inventory_events"
+    with patch("app.services.warehouse_service.WAREHOUSE_ROOT", warehouse_root), \
+         patch("app.services.warehouse_service.INVENTORY_EVENTS_ROOT", events_root):
+        yield warehouse_root

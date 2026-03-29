@@ -1,6 +1,7 @@
 # 📦 IMS Makefile
 
 .PHONY: up down reset rebuild logs test test-e2e test-all test-clean migrate shell
+.PHONY: warehouse
 
 # -------------------------
 # Dev lifecycle
@@ -35,6 +36,12 @@ migrate:
 # -------------------------
 export:
 	python -m app.scripts.export_events
+
+# -------------------------
+# Warehouse
+# -------------------------
+warehouse:
+	python -m app.scripts.build_warehouse
 
 # -------------------------
 # Shell access
