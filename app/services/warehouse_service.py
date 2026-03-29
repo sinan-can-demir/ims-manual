@@ -37,7 +37,7 @@ def build_dim_products(db: Session) -> int:
 def build_dim_dates(start_date, end_date) -> int:
 
     # 1. Get all dates from start_date to end_date
-    dates = pd.date_range(start=start_date, end=end_date, freq="d")
+    dates = pd.date_range(start=start_date, end=end_date, freq="D")
 
     # 2. Build a DataFrame using dates
     df = pd.DataFrame({
