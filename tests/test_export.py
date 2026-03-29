@@ -1,48 +1,11 @@
 # tests/test_export.py
 
-import uuid
 import pandas as pd
 import pytest
 
 from unittest.mock import patch
-from .utils import create_product
+from .utils import create_product, purchase
 from app.services.export_service import export_inventory_events
-
-
-# ---------------------------------------------------------------------------
-# Fixture: redirect all file I/O to a temp directory
-# ---------------------------------------------------------------------------
-
-@pytest.fixture
-def export_paths(tmp_path):
-    """
-    Patches INVENTORY_EVENTS_ROOT and CHECKPOINT_FILE to a pytest-managed
-    temp directory so tests never touch the real data_lake/ folder and
-    never interfere with each other.
-    """
-    events_root = tmp_path / "inventory_events"
-    checkpoint  = tmp_path / "checkpoints.json"
-
-    with patch("app.services.export_service.INVENTORY_EVENTS_ROOT", events_root), \
-         patch("app.services.export_service.CHECKPOINT_FILE", checkpoint):
-        yield events_root, checkpoint
-
-
-# ---------------------------------------------------------------------------
-# Helper: post an inventory event through the HTTP client
-# ---------------------------------------------------------------------------
-
-def _purchase(client, product_id: int, quantity: int, event_id: str | None = None):
-    event_id = event_id or f"evt-{uuid.uuid4()}"
-    response = client.post("/api/inventory/events", json={
-        "product_id": product_id,
-        "event_type": "PURCHASE",
-        "quantity": quantity,
-        "event_id": event_id,
-    })
-    assert response.status_code == 201, response.json()
-    return response.json()
-
 
 # ---------------------------------------------------------------------------
 # Test 1 — Full export creates files and returns correct metadata
@@ -57,8 +20,8 @@ def test_full_export_creates_files(client, db, export_paths):
     events_root, _ = export_paths
 
     product = create_product(client)
-    _purchase(client, product["id"], 10)
-    _purchase(client, product["id"], 5)
+    purchase(client, product["id"], 10)
+    purchase(client, product["id"], 5)
 
     # expire_all() forces the fixture db session to re-read from the
     # connection rather than serve stale identity-map cache. Required
@@ -84,7 +47,7 @@ def test_partition_structure(client, db, export_paths):
     events_root, _ = export_paths
 
     product = create_product(client)
-    _purchase(client, product["id"], 20)
+    purchase(client, product["id"], 20)
 
     db.expire_all()
     export_inventory_events(db, incremental=False)
@@ -111,7 +74,7 @@ def test_export_schema_columns(client, db, export_paths):
     events_root, _ = export_paths
 
     product = create_product(client)
-    _purchase(client, product["id"], 15)
+    purchase(client, product["id"], 15)
 
     db.expire_all()
     export_inventory_events(db, incremental=False)
@@ -139,8 +102,8 @@ def test_incremental_export_only_new_events(client, db, export_paths):
     _, checkpoint = export_paths
 
     product = create_product(client)
-    _purchase(client, product["id"], 10)
-    _purchase(client, product["id"], 20)
+    purchase(client, product["id"], 10)
+    purchase(client, product["id"], 20)
 
     # First run — full baseline
     db.expire_all()
@@ -150,7 +113,7 @@ def test_incremental_export_only_new_events(client, db, export_paths):
     assert checkpoint.exists(), "Checkpoint file must be written after first export"
 
     # Add one more event, then expire so the fixture db session sees it
-    _purchase(client, product["id"], 30)
+    purchase(client, product["id"], 30)
     db.expire_all()
 
     # Second run — should only pick up the new event
@@ -172,7 +135,7 @@ def test_incremental_no_new_events(client, db, export_paths):
     - not crash
     """
     product = create_product(client)
-    _purchase(client, product["id"], 10)
+    purchase(client, product["id"], 10)
 
     db.expire_all()
     export_inventory_events(db, incremental=True)

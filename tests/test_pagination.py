@@ -1,27 +1,13 @@
 # tests/test_pagination.py
 
-import uuid
-from .utils import create_product
-
-
-def _purchase(client, product_id: int):
-    response = client.post("/api/inventory/events", json={
-        "product_id": product_id,
-        "event_type": "PURCHASE",
-        "quantity": 10,
-        "event_id": f"evt-{uuid.uuid4()}",
-    })
-    assert response.status_code == 201
-    return response.json()
-
+from .utils import create_product, purchase
 
 def test_limit(client, db):
     product = create_product(client)
     pid = product["id"]
-
-    _purchase(client, pid)
-    _purchase(client, pid)
-    _purchase(client, pid)
+    purchase(client, pid, 10)
+    purchase(client, pid, 10)
+    purchase(client, pid, 10)
 
     res = client.get(f"/api/inventory/events/{pid}?limit=1")
     assert res.status_code == 200
@@ -31,10 +17,10 @@ def test_limit(client, db):
 def test_offset(client, db):
     product = create_product(client)
     pid = product["id"]
-
-    e1 = _purchase(client, pid)
-    _purchase(client, pid)
-    _purchase(client, pid)
+    
+    e1 = purchase(client, pid, 10)
+    purchase(client, pid, 10)
+    purchase(client, pid, 10)
 
     res = client.get(f"/api/inventory/events/{pid}?offset=1")
     assert res.status_code == 200
