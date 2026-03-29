@@ -56,5 +56,10 @@ test.db
 local_settings.py
 
 # parquet files
-*.parquet
+data_lake/*.parquet
 data_lake/checkpoints.json
+
+# Warehouse
+warehouse/*.parquet
+warehouse/*.duckdb
+*.duckdb
