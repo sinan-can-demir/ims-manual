@@ -38,22 +38,22 @@ data_lake/
 
 ### Partitioning
 
-- [ ] Extract year, month, day
-- [ ] Group by partitions
-- [ ] Write partitioned files
-- [ ] Ensure directory auto-creation
+- [x] Extract year, month, day
+- [x] Group by partitions
+- [x] Write partitioned files
+- [x] Ensure directory auto-creation
 
 ### API Access (temporary)
 
-- [ ] Add `/inventory/export` endpoint
-- [ ] Return export metadata (rows, partitions)
+- [x] Add `/inventory/export` endpoint
+- [x] Return export metadata (rows, partitions)
 
 ### Validation
 
-- [ ] Manually create events
-- [ ] Run export endpoint
-- [ ] Verify file structure with `tree`
-- [ ] Load parquet with pandas and inspect
+- [x] Manually create events
+- [x] Run export endpoint
+- [x] Verify file structure with `tree`
+- [x] Load parquet with pandas and inspect
 
 ---
 
@@ -65,10 +65,10 @@ Export only new events, not everything.
 
 ### Implementation
 
-- [ ] Add `last_exported_at` tracking
-- [ ] Filter query: `created_at > last_exported_at`
-- [ ] Store checkpoint locally (file or table)
-- [ ] Update checkpoint after export
+- [x] Add `last_id` tracking (uses id instead of timestamp — more robust)
+- [x] Filter query: `id > last_id`
+- [x] Store checkpoint locally (file or table)
+- [x] Update checkpoint after export
 
 ### New File
 
@@ -90,10 +90,10 @@ Pipeline should be repeatable and deterministic.
 
 ### Tasks
 
-- [ ] Add CLI script: `python scripts/export_events.py`
-- [ ] Ensure same input → same output
-- [ ] Add logging to export process
-- [ ] Handle empty export gracefully
+- [x] Add CLI script: `python scripts/export_events.py`
+- [x] Ensure same input → same output
+- [x] Add logging to export process
+- [x] Handle empty export gracefully
 
 ---
 
@@ -105,10 +105,10 @@ Ensure exported data is correct.
 
 ### Tasks
 
-- [ ] Verify row counts match DB
-- [ ] Validate schema consistency
-- [ ] Ensure no duplicate `event_id`
-- [ ] Add simple validation script
+- [x] Verify row counts match DB
+- [x] Validate schema consistency
+- [x] Ensure no duplicate `event_id`
+- [x] Add simple validation script
 
 ---
 
@@ -116,10 +116,10 @@ Ensure exported data is correct.
 
 Optional but strong.
 
-- [ ] Test export creates files
-- [ ] Test partition structure
-- [ ] Test incremental logic
-- [ ] Test idempotent export
+- [x] Test export creates files
+- [x] Test partition structure
+- [x] Test incremental logic
+- [x] Test idempotent export (partial)
 
 ---
 
@@ -127,7 +127,7 @@ Optional but strong.
 
 ### Extend your logger
 
-- [ ] Log export start
+- [x] Log export start
 - [ ] Log export completion
 - [ ] Log number of rows exported
 - [ ] Log partition counts
@@ -138,7 +138,7 @@ Optional but strong.
 
 Not optimization, just awareness.
 
-- [ ] Avoid loading unnecessary columns
+- [x] Avoid loading unnecessary columns
 - [ ] Ensure batch export is efficient
 - [ ] Keep memory usage reasonable
 
@@ -148,11 +148,11 @@ Not optimization, just awareness.
 
 You are done when:
 
-- [ ] Events exported to Parquet
-- [ ] Partitioned by date
-- [ ] Incremental export working
-- [ ] Pipeline reproducible
-- [ ] Data validated
+- [x] Events exported to Parquet
+- [x] Partitioned by date
+- [x] Incremental export working
+- [x] Pipeline reproducible
+- [x] Data validated
 
 ---
 

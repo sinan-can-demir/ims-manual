@@ -613,3 +613,38 @@ It doesn'y get a parameter as intended. I think it is a timestamp mismatch betwe
 I made the changes in export service and then it got fixed. (lines 46/68-71/164)
 
 The export pipeline now has full test coverage.
+
+## 3/27/2026  
+I finished and closed epoch2. Now started working on `warehouse`.  
+A warehouse is where we prepare raw data stored in `data_lake` for data analysis and BI.  
+
+I decided to use duckdb because it can query parquet files with a single python line, can run locally and fast. Since I don't have enough resources, DuckDB looks like the best option out there.  
+
+Now, I ran into a new concept: Dimension tables.  
+
+A **dimension table** is denormalized lookup table that answers questions like what, when, where and who. They will be used for BI and data analysis. Also, premade tables will accelerate the search during the analysis. This will increase performance.  
+The dimension tables I will use will include:  
+
+dim_products answers "what product was involved?"  
+
+|product_id | name      | sku     | created_at  | 
+|-----------|-----------|---------|-------------|
+|1          | Widget A  | WGT-001 | 2026-03-14  |
+|2          | Widget B  | WGT-002 | 2026-03-15  |
+
+dim_dates answers "when did it happen?"  (will also help with business operations since timestampts are not optimal format for BI)
+
+|date_id    | year | month | quarter | day_of_week | is_weekend  |
+|-----------|------|-------|---------|-------------|-------------|
+|2026-03-14 | 2026 | 3     | 1       | Saturday    | true        |
+|2026-03-15 | 2026 | 3     | 1       | Sunday      | true        |
+
+fact_inventory_events answers "what happened?" — and references both dimensions by key:  
+
+|event_id | product_id | date_id    | event_type | quantity |
+|--------|------------|------------|------------|----------|
+|evt-001  | 1          | 2026-03-14 | PURCHASE   | 100  |
+|evt-002  | 1          | 2026-03-15 | SALE       | -20  |
+
+
+These tables will help with minimizing the query search and avoiding joins.
