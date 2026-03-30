@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: stg_inventory_events
+    description: "Staged inventory events from the data lake. Adds date_id derived from created_at."
+    columns:
+      - name: event_id
+        description: "Unique event identifier"
+      - name: product_id
+        description: "Foreign key to products"
+      - name: event_type
+        description: "PURCHASE, SALE, DAMAGE, ADJUSTMENT, or RETURN"
+      - name: quantity
+        description: "Normalized quantity delta — negative for SALE and DAMAGE"
+      - name: created_at
+        description: "Original event timestamp"
+      - name: date_id
+        description: "Date portion of created_at in YYYY-MM-DD format for joining to dim_dates"

@@ -11,3 +11,4 @@ pandas
 pyarrow
 python-json-logger
 duckdb
+dbt-duckdb

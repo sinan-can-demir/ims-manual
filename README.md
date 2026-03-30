@@ -524,6 +524,11 @@ make test        # Run tests
 make migrate     # Apply migrations
 make shell       # Shell into container
 make reset       # Full reset (destroys data)
+make export      
+make export      → export events to data lake
+make warehouse   → build dim_products and dim_dates (Python)
+make dbt-run     → build all dbt models
+make dbt-test    → run data quality tests
 ```
 
 ---
@@ -544,10 +549,10 @@ IMS is developed in epochs, evolving from a simple backend to a full data platfo
 | Epoch | Focus | Status |
 |-------|-------|--------|
 | 0 | Foundations | ✅ Complete |
-| 1 | Event-Driven Backend | In Progress |
-| 2 | Batch Data Platform | Planned |
-| 3 | Data Warehouse | Planned |
-| 4 | Streaming Platform | Planned |
+| 1 | Event-Driven Backend | ✅ Complete |
+| 2 | Batch Data Platform | ✅ Complete |
+| 3 | Data Warehouse | ✅ Complete |
+| 4 | Streaming Platform | ✅ Complete |
 | 5 | ML Platform | Planned |
 | 6 | Application Layer | Planned |
 | 7 | Advanced Automation | Optional |

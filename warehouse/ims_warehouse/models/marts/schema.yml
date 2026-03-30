@@ -1,0 +1,64 @@
+version: 2
+
+models:
+  - name: dim_products
+    description: "Product dimension table — one row per product"
+    columns:
+      - name: product_id
+        description: "Primary key"
+      - name: name
+        description: "Product name"
+      - name: sku
+        description: "Stock keeping unit — unique identifier"
+      - name: created_at
+        description: "When the product was created"
+
+  - name: dim_dates
+    description: "Date dimension table — one row per calendar date, pre-generated"
+    columns:
+      - name: date_id
+        description: "Primary key — format YYYY-MM-DD"
+      - name: year
+        description: "Calendar year"
+      - name: month
+        description: "Calendar month (1-12)"
+      - name: day
+        description: "Day of month"
+      - name: quarter
+        description: "Calendar quarter (1-4)"
+      - name: day_of_week
+        description: "Full day name — Monday, Tuesday, etc."
+      - name: is_weekend
+        description: "True if Saturday or Sunday"
+
+  - name: fact_inventory_events
+    description: "Fact table — one row per inventory event, joined with dimension keys"
+    columns:
+      - name: event_id
+        description: "Natural key from source — unique per event"
+      - name: product_id
+        description: "Foreign key to dim_products"
+      - name: date_id
+        description: "Foreign key to dim_dates — YYYY-MM-DD"
+      - name: event_type
+        description: "PURCHASE, SALE, DAMAGE, ADJUSTMENT, or RETURN"
+      - name: quantity
+        description: "Normalized quantity delta"
+      - name: created_at
+        description: "Original event timestamp"
+
+  - name: fact_inventory_events
+    columns:
+      - name: event_id
+        tests:
+          - unique
+          - not_null
+      - name: product_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_products')
+              field: product_id
+      - name: quantity
+        tests:
+          - not_null
