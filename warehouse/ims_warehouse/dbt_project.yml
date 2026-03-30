@@ -35,3 +35,6 @@ models:
       +materialized: view
     marts:
       +materialized: table
+
+vars:
+  data_lake_path: "{{ env_var('DATA_LAKE_ROOT', '/home/sinan/Desktop/projects/ims-manual/data_lake') }}"
