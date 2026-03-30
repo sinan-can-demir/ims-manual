@@ -46,3 +46,19 @@ models:
         description: "Normalized quantity delta"
       - name: created_at
         description: "Original event timestamp"
+
+  - name: fact_inventory_events
+    columns:
+      - name: event_id
+        tests:
+          - unique
+          - not_null
+      - name: product_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_products')
+              field: product_id
+      - name: quantity
+        tests:
+          - not_null
