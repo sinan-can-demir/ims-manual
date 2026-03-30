@@ -2,18 +2,20 @@ version: 2
 
 sources:
   - name: data_lake
-    description: "Partitioned Parquet files exported from PostgreSQL"
+    schema: main
+    meta:
+      external_location: "read_parquet('{{ env_var(\"DATA_LAKE_ROOT\", \"/home/sinan/Desktop/projects/ims-manual/data_lake\") }}/inventory_events/**/*.parquet')"
     tables:
       - name: inventory_events
-        description: "Append-only inventory event log"
+        description: "Append-only inventory event log — source of truth for all stock changes"
         columns:
           - name: event_id
-            description: "Unique event identifier"
+            description: "Unique identifier for idempotency"
           - name: product_id
-            description: "FK to products"
+            description: "Foreign key to products"
           - name: event_type
-            description: "PURCHASE, SALE, DAMAGE, ADJUSTMENT, RETURN"
+            description: "PURCHASE, SALE, DAMAGE, ADJUSTMENT, or RETURN"
           - name: quantity
-            description: "Normalized quantity delta"
+            description: "Normalized quantity delta — negative for SALE and DAMAGE"
           - name: created_at
-            description: "Event timestamp"
+            description: "Timestamp of when the event was recorded"
