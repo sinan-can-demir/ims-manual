@@ -63,3 +63,4 @@ data_lake/checkpoints.json
 warehouse/*.parquet
 warehouse/*.duckdb
 *.duckdb
+warehouse/ims_warehouse/target/
