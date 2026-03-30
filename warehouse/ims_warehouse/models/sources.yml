@@ -1,0 +1,19 @@
+version: 2
+
+sources:
+  - name: data_lake
+    description: "Partitioned Parquet files exported from PostgreSQL"
+    tables:
+      - name: inventory_events
+        description: "Append-only inventory event log"
+        columns:
+          - name: event_id
+            description: "Unique event identifier"
+          - name: product_id
+            description: "FK to products"
+          - name: event_type
+            description: "PURCHASE, SALE, DAMAGE, ADJUSTMENT, RETURN"
+          - name: quantity
+            description: "Normalized quantity delta"
+          - name: created_at
+            description: "Event timestamp"
