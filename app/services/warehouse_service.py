@@ -1,4 +1,7 @@
 # app/services/warehouse_service.py
+# NOTE: dim_products and dim_dates builders are kept for bootstrapping.
+# fact_inventory_events is now managed by dbt.
+# See warehouse/ims_warehouse/ for the dbt project.
 
 import pandas as pd
 import duckdb

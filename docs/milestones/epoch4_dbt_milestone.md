@@ -86,21 +86,21 @@ This is the only new dependency. No new infrastructure needed.
 
 ### BLOCK 1 — Setup (45 min)
 
-- [ ] Install dbt-duckdb
+- [x] Install dbt-duckdb
   ```bash
   pip install dbt-duckdb
   ```
-- [ ] Add `dbt-duckdb` to `requirements.txt`
-- [ ] Initialize dbt project inside `warehouse/`:
+- [x] Add `dbt-duckdb` to `requirements.txt` ## requires python 11
+- [x] Initialize dbt project inside `warehouse/`:
   ```bash
   cd warehouse
   dbt init ims_warehouse
   ```
-- [ ] Configure `profiles.yml` to use DuckDB with your Parquet files
-- [ ] Configure `dbt_project.yml` with project name and model paths
-- [ ] Add `warehouse/ims_warehouse/target/` to `.gitignore`
+- [x] Configure `profiles.yml` to use DuckDB with your Parquet files
+- [x] Configure `dbt_project.yml` with project name and model paths
+- [x] Add `warehouse/ims_warehouse/target/` to `.gitignore`
   - dbt writes compiled SQL and run artifacts here — never commit them
-- [ ] Run `dbt debug` to verify connection works
+- [x] Run `dbt debug` to verify connection works
 
 **What `profiles.yml` looks like for dbt-duckdb:**
 ```yaml
@@ -149,8 +149,8 @@ sources:
             description: "Event timestamp"
 ```
 
-- [ ] Create `sources.yml` declaring inventory_events as a source
-- [ ] Verify dbt can read the source with `dbt source freshness`
+- [x] Create `sources.yml` declaring inventory_events as a source
+- [x] Verify dbt can read the source with `dbt source freshness`
 
 **Commit:**
 ```bash
@@ -184,10 +184,10 @@ FROM {{ source('data_lake', 'inventory_events') }}
 The `{{ source(...) }}` syntax is dbt's way of referencing sources.
 dbt resolves this to the actual Parquet path at runtime.
 
-- [ ] Create `models/staging/` directory
-- [ ] Write `stg_inventory_events.sql`
-- [ ] Run `dbt run --select stg_inventory_events` and verify output
-- [ ] Add model description to `schema.yml`
+- [x] Create `models/staging/` directory
+- [x] Write `stg_inventory_events.sql`
+- [x] Run `dbt run --select stg_inventory_events` and verify output
+- [x] Add model description to `schema.yml`
 
 **Commit:**
 ```bash
@@ -230,11 +230,11 @@ SELECT
 FROM read_parquet('{{ env_var("WAREHOUSE_ROOT") }}/dim_dates.parquet')
 ```
 
-- [ ] Create `models/marts/` directory
-- [ ] Write `dim_products.sql`
-- [ ] Write `dim_dates.sql`
-- [ ] Run `dbt run --select dim_products dim_dates`
-- [ ] Add descriptions to `schema.yml`
+- [x] Create `models/marts/` directory
+- [x] Write `dim_products.sql`
+- [x] Write `dim_dates.sql`
+- [x] Run `dbt run --select dim_products dim_dates`
+- [x] Add descriptions to `schema.yml`
 
 **Commit:**
 ```bash
@@ -270,10 +270,10 @@ dbt automatically runs dependencies in the correct order —
 `stg_inventory_events` and `dim_products` will always run before
 `fact_inventory_events`.
 
-- [ ] Write `fact_inventory_events.sql`
-- [ ] Run `dbt run` to build all models
-- [ ] Verify output matches Epoch 3 warehouse output
-- [ ] Add descriptions to `schema.yml`
+- [x] Write `fact_inventory_events.sql`
+- [x] Run `dbt run` to build all models
+- [x] Verify output matches Epoch 3 warehouse output
+- [x] Add descriptions to `schema.yml`
 
 **Commit:**
 ```bash
@@ -305,11 +305,11 @@ models:
           - not_null
 ```
 
-- [ ] Add `unique` and `not_null` tests to `fact_inventory_events`
-- [ ] Add `not_null` tests to `dim_products` and `dim_dates`
-- [ ] Add `relationships` test linking fact to dim_products
-- [ ] Run `dbt test` and verify all tests pass
-- [ ] Fix any failures
+- [x] Add `unique` and `not_null` tests to `fact_inventory_events`
+- [x] Add `not_null` tests to `dim_products` and `dim_dates`
+- [x] Add `relationships` test linking fact to dim_products
+- [x] Run `dbt test` and verify all tests pass
+- [x] Fix any failures
 
 **Why dbt tests matter:**
 These run every time you build the warehouse. If a bad export
@@ -338,10 +338,10 @@ This opens a browser with:
 - Column-level descriptions for every model
 - Test coverage per model
 
-- [ ] Add descriptions to every model in `schema.yml`
-- [ ] Add descriptions to every column
-- [ ] Run `dbt docs generate` successfully
-- [ ] Screenshot the lineage graph for your README
+- [x] Add descriptions to every model in `schema.yml`
+- [x] Add descriptions to every column
+- [x] Run `dbt docs generate` successfully
+- [x] Screenshot the lineage graph for your README
 
 **Commit:**
 ```bash
@@ -352,7 +352,7 @@ git commit -m "docs(dbt): add model and column descriptions"
 
 ### BLOCK 8 — Makefile and Cleanup (30 min)
 
-- [ ] Add Makefile targets:
+- [x] Add Makefile targets:
   ```makefile
   dbt-run:
       cd warehouse/ims_warehouse && dbt run
@@ -364,7 +364,7 @@ git commit -m "docs(dbt): add model and column descriptions"
       cd warehouse/ims_warehouse && dbt docs generate && dbt docs serve
   ```
 
-- [ ] Update full pipeline in README:
+- [x] Update full pipeline in README:
   ```
   make export      → export events to data lake
   make warehouse   → build dim_products and dim_dates (Python)
@@ -372,14 +372,14 @@ git commit -m "docs(dbt): add model and column descriptions"
   make dbt-test    → run data quality tests
   ```
 
-- [ ] Deprecate `warehouse_service.py` — add a comment at the top:
+- [x] Deprecate `warehouse_service.py` — add a comment at the top:
   ```python
   # NOTE: dim_products and dim_dates builders are kept for bootstrapping.
   # fact_inventory_events is now managed by dbt.
   # See warehouse/ims_warehouse/ for the dbt project.
   ```
 
-- [ ] Update ROADMAP.md
+- [x] Update ROADMAP.md
 
 **Commit:**
 ```bash
@@ -392,12 +392,12 @@ git commit -m "chore: add dbt Makefile targets and deprecate warehouse service"
 
 Epoch 4 is complete when:
 
-- [ ] `dbt run` builds all models successfully
-- [ ] `dbt test` passes all schema tests
-- [ ] `dbt docs generate` produces documentation
-- [ ] Lineage graph shows correct model dependencies
-- [ ] `make dbt-run` works from project root
-- [ ] fact_inventory_events output matches Epoch 3 output
+- [x] `dbt run` builds all models successfully
+- [x] `dbt test` passes all schema tests
+- [x] `dbt docs generate` produces documentation
+- [x] Lineage graph shows correct model dependencies
+- [x] `make dbt-run` works from project root
+- [x] fact_inventory_events output matches Epoch 3 output
 
 ---
 
