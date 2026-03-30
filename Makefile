@@ -1,7 +1,6 @@
 # 📦 IMS Makefile
 
-.PHONY: up down reset rebuild logs test test-e2e test-all test-clean migrate shell
-.PHONY: warehouse
+.PHONY: up down reset rebuild logs test test-e2e test-all test-clean migrate shell warehouse
 
 # -------------------------
 # Dev lifecycle
@@ -42,6 +41,18 @@ export:
 # -------------------------
 warehouse:
 	python -m app.scripts.build_warehouse
+
+# -------------------------
+# dbt
+# -------------------------
+dbt-run:
+	cd warehouse/ims_warehouse && dbt run
+
+dbt-test:
+	cd warehouse/ims_warehouse && dbt test
+
+dbt-docs:
+	cd warehouse/ims_warehouse && dbt docs generate && dbt docs serve
 
 # -------------------------
 # Shell access
