@@ -130,13 +130,13 @@ EPOCH 3 — Data Warehouse
 
 Goal: Build an analytics layer on top of the data lake.
 
-[ ] Choose warehouse approach (DuckDB local vs hosted Postgres schema vs dbt)
-[ ] Create warehouse schema
-[ ] Build fact_inventory_events (cleaned, typed, partitioned view)
-[ ] Build dim_products (product dimension table)
-[ ] Build dim_dates (date dimension table)
-[ ] Create analytical metrics (daily stock levels, event counts, turnover rate)
-[ ] Add dbt project (if chosen): models, tests, documentation
+[x] Choose warehouse approach (DuckDB local vs hosted Postgres schema vs dbt)
+[x] Create warehouse schema
+[x] Build fact_inventory_events (cleaned, typed, partitioned view)
+[x] Build dim_products (product dimension table)
+[x] Build dim_dates (date dimension table)
+[x] Create analytical metrics (daily stock levels, event counts, turnover rate)
+[x] Add dbt project (if chosen): models, tests, documentation
 
 Warehouse Target Schema:
 

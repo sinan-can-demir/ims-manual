@@ -55,6 +55,12 @@ dbt-docs:
 	cd warehouse/ims_warehouse && dbt docs generate && dbt docs serve
 
 # -------------------------
+# Features
+# -------------------------
+features:
+	python -m app.scripts.build_features
+
+# -------------------------
 # Shell access
 # -------------------------
 shell:

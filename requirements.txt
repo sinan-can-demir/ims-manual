@@ -12,3 +12,5 @@ pyarrow
 python-json-logger
 duckdb
 dbt-duckdb
+prophet
+joblib
