@@ -1,6 +1,6 @@
 # 📦 IMS Makefile
 
-.PHONY: up down reset rebuild logs test test-e2e test-all test-clean migrate shell warehouse train
+.PHONY: up down reset rebuild logs test test-e2e test-all test-clean migrate shell warehouse train dashboard
 
 # -------------------------
 # Dev lifecycle
@@ -23,6 +23,12 @@ rebuild:
 
 logs:
 	docker compose logs -f
+
+# -------------------------
+# Application layer
+# -------------------------
+dashboard:
+	streamlit run dashboard/app.py
 
 # -------------------------
 # Database
