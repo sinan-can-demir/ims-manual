@@ -14,3 +14,5 @@ duckdb
 dbt-duckdb
 joblib
 prophet
+streamlit
+plotly
