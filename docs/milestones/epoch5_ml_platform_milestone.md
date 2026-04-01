@@ -235,9 +235,9 @@ A training function that:
 
 #### Implementation steps
 
-- [ ] Create `models/` directory at project root
-- [ ] Add `models/*.pkl` to `.gitignore`
-- [ ] Write `forecast_service.py`:
+- [x] Create `models/` directory at project root
+- [x] Add `models/*.pkl` to `.gitignore`
+- [x] Write `forecast_service.py`:
 
 ```python
 import pandas as pd
@@ -327,7 +327,7 @@ def forecast(product_id: int, days: int = 7) -> pd.DataFrame:
     return prediction[["ds", "yhat", "yhat_lower", "yhat_upper"]].tail(days)
 ```
 
-- [ ] Create CLI script `app/scripts/train_model.py`:
+- [x] Create CLI script `app/scripts/train_model.py`:
   ```python
   from app.services.forecast_service import train_all_models
 
@@ -339,19 +339,19 @@ def forecast(product_id: int, days: int = 7) -> pd.DataFrame:
   if __name__ == "__main__":
       main()
   ```
-- [ ] Add Makefile target:
+- [x] Add Makefile target:
   ```makefile
   train:
       python -m app.scripts.train_model
   ```
-- [ ] Test the full pipeline manually:
+- [x] Test the full pipeline manually:
   ```bash
   make export      # ensure data lake is populated
   make warehouse   # ensure warehouse is built
   make features    # build feature store
   make train       # train models
   ```
-- [ ] Verify a model file exists at `models/prophet_1.pkl`
+- [x] Verify a model file exists at `models/prophet_1.pkl`
 
 #### Key concept: why we save models to disk
 

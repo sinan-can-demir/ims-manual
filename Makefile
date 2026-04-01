@@ -1,6 +1,6 @@
 # 📦 IMS Makefile
 
-.PHONY: up down reset rebuild logs test test-e2e test-all test-clean migrate shell warehouse
+.PHONY: up down reset rebuild logs test test-e2e test-all test-clean migrate shell warehouse train
 
 # -------------------------
 # Dev lifecycle
@@ -59,6 +59,12 @@ dbt-docs:
 # -------------------------
 features:
 	python -m app.scripts.build_features
+
+# -------------------------
+# Train
+# -------------------------
+train:
+	python -m app.scripts.train_model
 
 # -------------------------
 # Shell access
