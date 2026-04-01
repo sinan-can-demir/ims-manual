@@ -664,9 +664,9 @@ Epoch 5 is complete when:
 - [x] `models/prophet_{product_id}.pkl` trains and saves without errors
 - [x] `GET /api/forecast/{product_id}` returns a valid 7-day forecast
 - [x] `GET /api/restock/{product_id}` returns urgency + recommended quantity
-- [ ] All forecast and restock tests passing
-- [ ] `make features && make train` runs end-to-end cleanly
-- [ ] README documents the new pipeline steps
+- [x] All forecast and restock tests passing
+- [x] `make features && make train` runs end-to-end cleanly
+- [x] README documents the new pipeline steps
 
 ---
 

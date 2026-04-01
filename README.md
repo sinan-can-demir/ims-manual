@@ -524,11 +524,12 @@ make test        # Run tests
 make migrate     # Apply migrations
 make shell       # Shell into container
 make reset       # Full reset (destroys data)
-make export      
 make export      → export events to data lake
 make warehouse   → build dim_products and dim_dates (Python)
 make dbt-run     → build all dbt models
 make dbt-test    → run data quality tests
+make features    → build feature store from warehouse
+make train       → train Prophet models per product
 ```
 
 ---
