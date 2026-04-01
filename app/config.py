@@ -1,3 +1,5 @@
+# app/config.py
+
 from pathlib import Path
 import os
 
@@ -16,3 +18,9 @@ CHECKPOINT_FILE = DATA_LAKE_ROOT / "checkpoints.json"
 WAREHOUSE_ROOT = Path(os.getenv("WAREHOUSE_ROOT", BASE_DIR / "warehouse"))
 WAREHOUSE_START_DATE = os.getenv("WAREHOUSE_START_DATE", "2020-01-01")
 WAREHOUSE_END_DATE = os.getenv("WAREHOUSE_END_DATE", "2030-12-31")
+
+# -------------------
+# Feature
+# -------------------
+FEATURE_STORE_PATH=Path(os.getenv("FEATURE_STORE_PATH", BASE_DIR / "feature_store"))
+MODELS_DIR = Path(os.getenv("MODELS_DIR", BASE_DIR / "models"))

@@ -64,3 +64,6 @@ warehouse/*.parquet
 warehouse/*.duckdb
 *.duckdb
 warehouse/ims_warehouse/target
+
+# feature_store parquets
+feature_store/*.parquet
