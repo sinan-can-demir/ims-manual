@@ -452,11 +452,11 @@ app.include_router(forecast_router, prefix="/api")
 
 #### Implementation steps
 
-- [ ] Write `app/schemas/forecast.py`
-- [ ] Write `app/api/forecast.py`
-- [ ] Register router in `app/main.py`
-- [ ] Test manually via `http://localhost:8000/docs`
-- [ ] Verify response shape matches schema
+- [x] Write `app/schemas/forecast.py`
+- [x] Write `app/api/forecast.py`
+- [x] Register router in `app/main.py`
+- [x] Test manually via `http://localhost:8000/docs`
+- [x] Verify response shape matches schema
 
 #### Example response
 
@@ -520,7 +520,7 @@ stockout_in_days        — how many days until inventory hits 0 at current dema
 
 #### Implementation steps
 
-- [ ] Write `app/services/restock_service.py`:
+- [x] Write `app/services/restock_service.py`:
 
 ```python
 from sqlalchemy.orm import Session
@@ -573,8 +573,8 @@ def get_restock_recommendation(db: Session, product_id: int) -> dict:
     }
 ```
 
-- [ ] Add Pydantic schema `RestockResponse` to `app/schemas/forecast.py`
-- [ ] Add endpoint `GET /api/restock/{product_id}` to `app/api/forecast.py`
+- [x] Add Pydantic schema `RestockResponse` to `app/schemas/forecast.py`
+- [x] Add endpoint `GET /api/restock/{product_id}` to `app/api/forecast.py`
 - [ ] Test via `/docs`
 
 #### Example response
@@ -660,10 +660,10 @@ git commit -m "docs: add ML platform documentation and update roadmap"
 
 Epoch 5 is complete when:
 
-- [ ] `feature_store/daily_sales.parquet` builds correctly from warehouse data
-- [ ] `models/prophet_{product_id}.pkl` trains and saves without errors
-- [ ] `GET /api/forecast/{product_id}` returns a valid 7-day forecast
-- [ ] `GET /api/restock/{product_id}` returns urgency + recommended quantity
+- [x] `feature_store/daily_sales.parquet` builds correctly from warehouse data
+- [x] `models/prophet_{product_id}.pkl` trains and saves without errors
+- [x] `GET /api/forecast/{product_id}` returns a valid 7-day forecast
+- [x] `GET /api/restock/{product_id}` returns urgency + recommended quantity
 - [ ] All forecast and restock tests passing
 - [ ] `make features && make train` runs end-to-end cleanly
 - [ ] README documents the new pipeline steps

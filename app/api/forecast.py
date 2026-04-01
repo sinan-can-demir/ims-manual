@@ -1,8 +1,12 @@
 # app/api/forecast.py
 
-from fastapi import APIRouter, HTTPException
-from app.schemas.forecast import ForecastResponse, ForecastPoint
+from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException, Depends
+
+from app.database import get_db
+from app.schemas.forecast import ForecastResponse, ForecastPoint, RestockResponse
 from app.services.forecast_service import forecast
+from app.services.restock_service import get_restock_recommendation
 
 router = APIRouter(prefix="/forecast", tags=["forecast"])
 
@@ -34,3 +38,20 @@ def get_forecast(product_id: int, days: int = 7):
         forecast_days=days,
         predictions=predictions,
     )
+
+@router.get("/restock/{product_id}", response_model=RestockResponse)
+def get_restock(product_id: int, db: Session = Depends(get_db)):
+    """
+    Return a recommended restock quantity
+    """
+
+    try:
+        result = get_restock_recommendation(db, product_id)
+    
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return result
