@@ -553,8 +553,8 @@ IMS is developed in epochs, evolving from a simple backend to a full data platfo
 | 2 | Batch Data Platform | ✅ Complete |
 | 3 | Data Warehouse | ✅ Complete |
 | 4 | Streaming Platform | ✅ Complete |
-| 5 | ML Platform | Planned |
-| 6 | Application Layer | Planned |
+| 5 | ML Platform | ✅ Complete |
+| 6 | Application Layer | In Progress |
 | 7 | Advanced Automation | Optional |
 
 ---
@@ -566,5 +566,5 @@ MIT License
 
 ## Author
 
-**Sinan Demir**
+**Sinan Demir**   
 Computer Science Student @ University of Texas at Dallas

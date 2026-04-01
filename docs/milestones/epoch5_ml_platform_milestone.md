@@ -575,7 +575,7 @@ def get_restock_recommendation(db: Session, product_id: int) -> dict:
 
 - [x] Add Pydantic schema `RestockResponse` to `app/schemas/forecast.py`
 - [x] Add endpoint `GET /api/restock/{product_id}` to `app/api/forecast.py`
-- [ ] Test via `/docs`
+- [x] Test via `/docs`
 
 #### Example response
 

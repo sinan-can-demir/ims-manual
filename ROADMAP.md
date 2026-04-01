@@ -1,6 +1,6 @@
 # IMS — Inventory Management System
 Author: Sinan Demir
-Last Updated: 2026-03-27
+Last Updated: 2026-04-01
 
 This roadmap organizes the development of IMS (Inventory Management System) into **epochs**.
 Each epoch unlocks the next capability. The system evolves from a simple backend into a full
