@@ -173,11 +173,12 @@ EPOCH 7 — Production Hardening & AWS Deployment (Next)
 Goal: Make the system production-grade and deploy it to AWS.  
 
 Phase 1 — Quick wins (no architecture changes)  
-[ ] Pin all dependency versions in requirements.txt  
-[ ] Add /health endpoint to FastAPI app (required by AWS ALB/ECS)  
-[ ] Add CORS middleware to FastAPI app  
-[ ] Add .env.example documenting all required environment variables  
-[ ] Tune SQLAlchemy connection pool for cloud (pool_pre_ping, pool_size, max_overflow)  
+[x] Pin all dependency versions in requirements.txt  
+[x] Add /health endpoint to FastAPI app (required by AWS ALB/ECS)  
+[x] Add CORS middleware to FastAPI app (origins via CORS_ORIGINS env var)  
+[x] Add .env.example documenting all required environment variables  
+[x] Fix docker-compose: add Postgres healthcheck, remove fragile sleep 3  
+[x] Tune SQLAlchemy connection pool for cloud (pool_pre_ping, pool_size, max_overflow)  
 
 Phase 2 — Security hardening  
 [ ] Remove hardcoded credentials from docker-compose.yml and database.py defaults  

@@ -7,7 +7,12 @@ DATABASE_URL = os.getenv(
     "postgresql://postgres:postgres@localhost:5432/ims"
 )
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(
+    DATABASE_URL,
+    pool_size=int(os.getenv("DB_POOL_SIZE", "5")),
+    max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "10")),
+    pool_pre_ping=True,  # drop and replace stale connections (important for cloud RDS)
+)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

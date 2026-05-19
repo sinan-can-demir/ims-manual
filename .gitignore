@@ -15,6 +15,7 @@ env/
 # Environment variables
 .env
 .env.*
+!.env.example
 
 # Python tools
 .pytest_cache/

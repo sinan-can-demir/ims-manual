@@ -12,6 +12,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ims"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   api:
     build:
@@ -19,7 +24,8 @@ services:
       dockerfile: ./docker/Dockerfile
     container_name: ims_api
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
       - "8000:8000"
     volumes:
@@ -29,7 +35,6 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/ims
     command: >
       sh -c "
-      sleep 3 &&
       alembic upgrade head &&
       uvicorn app.main:app --host 0.0.0.0 --port 8000
       "
