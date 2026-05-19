@@ -26,12 +26,12 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------------
-# Cached data loaders
-# TTL=300 means data refreshes every 5 minutes automatically
+# Data loaders
+# Sessions stay outside the cache layer.
+# Cache only plain Python values — never ORM objects.
 # ---------------------------------------------------------------
 
-@st.cache_data(ttl=300)
-def load_inventory(product_id: int) -> int:
+def _get_inventory(product_id: int) -> int:
     db = SessionLocal()
     try:
         return get_inventory(db, product_id)
@@ -39,8 +39,7 @@ def load_inventory(product_id: int) -> int:
         db.close()
 
 
-@st.cache_data(ttl=300)
-def load_restock(product_id: int) -> dict:
+def _get_restock(product_id: int) -> dict:
     db = SessionLocal()
     try:
         return get_restock_recommendation(db, product_id)
@@ -48,13 +47,7 @@ def load_restock(product_id: int) -> dict:
         db.close()
 
 
-@st.cache_data(ttl=300)
-def load_forecast(product_id: int) -> pd.DataFrame:
-    return forecast(product_id, days=7)
-
-
-@st.cache_data(ttl=300)
-def load_events(product_id: int) -> list[dict]:
+def _get_events(product_id: int) -> list[dict]:
     db = SessionLocal()
     try:
         events = (
@@ -64,6 +57,9 @@ def load_events(product_id: int) -> list[dict]:
             .limit(20)
             .all()
         )
+        # Serialize to plain dicts here, inside the session,
+        # before the session closes. Never let ORM objects
+        # escape the session boundary.
         return [{
             "Date":       e.created_at.strftime("%Y-%m-%d %H:%M"),
             "Event Type": e.event_type.value,
@@ -72,6 +68,26 @@ def load_events(product_id: int) -> list[dict]:
         } for e in events]
     finally:
         db.close()
+
+
+@st.cache_data(ttl=300)
+def load_inventory(product_id: int) -> int:
+    return _get_inventory(product_id)
+
+
+@st.cache_data(ttl=300)
+def load_restock(product_id: int) -> dict:
+    return _get_restock(product_id)
+
+
+@st.cache_data(ttl=300)
+def load_forecast(product_id: int) -> pd.DataFrame:
+    return forecast(product_id, days=7)
+
+
+@st.cache_data(ttl=300)
+def load_events(product_id: int) -> list[dict]:
+    return _get_events(product_id)
 
 
 # ---------------------------------------------------------------
