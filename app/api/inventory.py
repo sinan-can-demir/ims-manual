@@ -33,14 +33,6 @@ def create_inventory_event(
 def replay_inventory_projection(db: Session = Depends(get_db)):
     return rebuild_inventory_state(db)
 
-@router.get("/{product_id}", response_model=InventoryStateResponse)
-def inventory_level(product_id: int, db: Session = Depends(get_db)):
-    return InventoryStateResponse(
-        product_id=product_id,
-        quantity=get_inventory(db, product_id)
-    )
-
-
 @router.get("/events/{product_id}", response_model=list[InventoryEventResponse])
 def get_product_events(
     product_id: int,
@@ -58,6 +50,13 @@ def get_product_events(
     )
 
     return events
+
+@router.get("/{product_id}", response_model=InventoryStateResponse)
+def inventory_level(product_id: int, db: Session = Depends(get_db)):
+    return InventoryStateResponse(
+        product_id=product_id,
+        quantity=get_inventory(db, product_id)
+    )
 
 @router.post("/export", response_model=ExportMetadata)
 def export_inventory(db: Session = Depends(get_db)):

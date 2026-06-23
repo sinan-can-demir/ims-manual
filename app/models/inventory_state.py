@@ -27,7 +27,7 @@ class InventoryState(Base):
     quantity = Column(
         Integer,
         nullable=False,
-        default=0
+        server_default="0"
     )
 
     # Optional relationship

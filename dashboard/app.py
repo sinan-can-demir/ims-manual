@@ -96,7 +96,8 @@ def load_events(product_id: int) -> list[dict]:
 st.title("🏭 Inventory Management Dashboard")
 st.sidebar.header("Controls")
 
-feature_df = pd.read_parquet("feature_store/daily_sales.parquet")
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+feature_df = pd.read_parquet(_PROJECT_ROOT / "feature_store" / "daily_sales.parquet")
 product_ids = sorted(feature_df["product_id"].unique().tolist())
 
 selected_product = st.sidebar.selectbox(

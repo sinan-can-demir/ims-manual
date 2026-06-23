@@ -7,6 +7,7 @@ from app.database import get_db
 from app.schemas.forecast import ForecastResponse, ForecastPoint, RestockResponse
 from app.services.forecast_service import forecast
 from app.services.restock_service import get_restock_recommendation
+from app.core.logging import logger
 
 router = APIRouter(prefix="/forecast", tags=["forecast"])
 
@@ -20,8 +21,9 @@ def get_forecast(product_id: int, days: int = 7):
         df = forecast(product_id, days=days)
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("forecast_failed", extra={"product_id": product_id})
+        raise HTTPException(status_code=500, detail="Internal server error")
 
     predictions = [
         ForecastPoint(
@@ -44,14 +46,14 @@ def get_restock(product_id: int, db: Session = Depends(get_db)):
     """
     Return a recommended restock quantity
     """
-
     try:
         result = get_restock_recommendation(db, product_id)
-    
+    except HTTPException:
+        raise
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("restock_failed", extra={"product_id": product_id})
+        raise HTTPException(status_code=500, detail="Internal server error")
 
     return result

@@ -9,6 +9,7 @@ import duckdb
 from sqlalchemy.orm import Session
 from app.models.product import Product
 from app.config import WAREHOUSE_ROOT, INVENTORY_EVENTS_ROOT
+from app.core.logging import logger
 
 
 def _ensure_directories() -> None:
@@ -100,25 +101,15 @@ def build_fact_table() -> int:
     # 6. Return the row count
     return len(result)
 
-def build_warehouse(db: Session, start_date: str, end_date: str) -> bool:
-    try:
-        # 1. Ensure directory exists
-        _ensure_directories()
+def build_warehouse(db: Session, start_date: str, end_date: str) -> None:
+    _ensure_directories()
 
-        # 2. Build dim products, dim dates and fact tables.
-        products_count = build_dim_products(db)
-        dates_count = build_dim_dates(start_date, end_date)
-        facts_count = build_fact_table()
+    products_count = build_dim_products(db)
+    dates_count = build_dim_dates(start_date, end_date)
+    facts_count = build_fact_table()
 
-        # 3. Print the row counts
-        print(f"dim_products: {products_count} rows")
-        print(f"dim_dates: {dates_count} rows")
-        print(f"fact_inventory_events: {facts_count} rows")
-
-        # 4. return true if run successfully
-        return True
-
-    except Exception as e:
-        # Catch errors and return false
-        print(f"Warehouse build failed: {e}")
-        return False
+    logger.info("warehouse_built", extra={
+        "dim_products_rows": products_count,
+        "dim_dates_rows": dates_count,
+        "fact_inventory_events_rows": facts_count,
+    })

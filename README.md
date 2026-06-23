@@ -1,148 +1,72 @@
 # IMS — Inventory Management System
 
-A high-performance, event-driven inventory management system built with FastAPI and PostgreSQL. IMS tracks inventory changes through an append-only event log, enabling full auditability, event replay, and analytics capabilities.
+An event-driven inventory platform with a full analytics pipeline and ML-powered demand forecasting. Built from scratch as a learning project covering data engineering, backend systems, and machine learning.
 
-This system implements a simplified form of **event sourcing**, where all state changes are recorded as immutable events and projections are derived from them.
-
-I created this system to help small businesses manage their inventory with a modern, professional tool at no cost.
-
-With recent advancements in AI, I wanted to create something meaningful that could integrate with predictive models. This program will evolve to predict estimated restock quantities and dates.
-
-With recent advancements in AI, I wanted to create something meaningful that could integrate with predictive models.
+**Stack:** FastAPI · PostgreSQL · dbt · DuckDB · Prophet · Streamlit · Docker
 
 ---
 
-## Table of Contents
+## What it does
 
-- [Features](#features)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Local Development](#local-development)
-  - [Docker Development](#docker-development)
-- [API Reference](#api-reference)
-  - [Products](#products)
-  - [Inventory Events](#inventory-events)
-- [Database Schema](#database-schema)
-- [Event Types](#event-types)
-- [Testing](#testing)
-- [Development Workflow](#development-workflow)
-- [Environment Variables](#environment-variables)
-- [Roadmap](#roadmap)
-
----
-
-## Features
-
-- **Event-Driven Architecture**: All inventory changes are recorded as immutable events in an append-only ledger
-- **CQRS Pattern**: Separate write (events) and read (state projection) paths for optimized performance
-- **Idempotent Operations**: Duplicate events are safely handled using event IDs
-- **Oversell Protection**: Prevents sales and damage events that exceed available inventory
-- **Full Audit Trail**: Complete history of every inventory change with timestamps
-- **Event Replay**: Ability to reconstruct inventory state from events at any point in time
-- **Database Migrations**: Schema versioning via Alembic for safe migrations
-- **Performance**: O(1) inventory reads using projection model
----
-
-## 🧠 Engineering Highlights
-
-- Designed a CQRS-based system with separate write and read models
-- Implemented idempotent event handling using unique event IDs
-- Built projection-based inventory system for constant-time reads
-- Ensured transactional consistency between event log and projection
-- Developed full test suite (unit, integration, e2e)
-- Containerized system with automated migrations and reproducible setup
-- Leveraged AI-assisted development tools to accelerate debugging and design iterations
+- Tracks inventory changes as an **immutable event log** (event sourcing + CQRS)
+- Exports events to a **Parquet data lake**, transforms them in a **DuckDB warehouse** via dbt
+- Trains a **Prophet forecasting model** per product on historical demand
+- Serves a **Streamlit dashboard** with live inventory levels, event history, and 30-day demand forecasts
 
 ---
 
 ## Architecture
 
-IMS follows the **CQRS (Command Query Responsibility Segregation)** pattern:
-
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         WRITE PATH                              │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│   Client                                                        │
-│      ↓                                                          │
-│   POST /api/inventory/events                                    │
-│      ↓                                                          │
-│   InventoryEvent (append-only ledger)                           │
-│      ↓                                                          │
-│   Projection Update                                             │
-│      ↓                                                          │
-│   InventoryState                                                │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                      WRITE PATH                              │
+│   Client → POST /api/inventory/events                        │
+│          → inventory_events (append-only)                    │
+│          → inventory_state  (projection, same transaction)   │
+└──────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────────┐
-│                          READ PATH                              │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│   Client                                                        │
-│      ↓                                                          │
-│   GET /api/inventory/{product_id}                               │
-│      ↓                                                          │
-│   InventoryState (pre-computed projection)                      │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                      READ PATH                               │
+│   Client → GET /api/inventory/{product_id}                   │
+│          → inventory_state (O(1) pre-computed projection)    │
+└──────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────┐
+│                   ANALYTICS PIPELINE                         │
+│   PostgreSQL → Parquet (data lake)                           │
+│             → DuckDB  (warehouse)                            │
+│             → dbt     (dim/fact models + data quality tests) │
+│             → Prophet (demand forecast per product)          │
+│             → Streamlit dashboard                            │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-### Core Concepts
+### Core concepts
 
 | Concept | Description |
-|---------|-------------|
-| **InventoryEvent** | Immutable ledger entry recording a single inventory change |
-| **InventoryState** | Current inventory snapshot, derived from events |
-| **event_id** | Client-provided unique identifier for idempotency |
-| **product_id** | Foreign key linking events to products |
-
-### Inventory Calculation
-
-Inventory is NOT computed at read time.
-
-Instead:
-
-- Events are appended to `inventory_events`
-- A projection updates `inventory_state`
-- Reads are served from `inventory_state`
-
-This ensures:
-- constant-time reads
-- no runtime aggregation
-- consistency with event log
-
----
-
-### Projection Consistency
-
-Every write operation:
-
-1. Inserts into `inventory_events`
-2. Updates `inventory_state` in the same transaction
-
-This guarantees:
-- no divergence between event log and state
-- deterministic reconstruction capability
+|---|---|
+| `InventoryEvent` | Immutable ledger entry for every stock change |
+| `InventoryState` | Pre-computed projection — reads are O(1), no aggregation at query time |
+| `event_id` | Client-provided UUID for idempotent writes |
+| dbt models | Dimensional warehouse (products, dates, daily snapshots) built on DuckDB |
+| Feature store | Lag features + rolling averages prepared for ML training |
+| Prophet model | Per-product demand forecasting with 30-day horizon |
 
 ---
 
 ## Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| Web Framework | FastAPI |
-| Database | PostgreSQL 15 |
-| ORM | SQLAlchemy |
-| Migrations | Alembic |
+| Layer | Technology |
+|---|---|
+| API | FastAPI + Uvicorn |
+| Database | PostgreSQL 15 + SQLAlchemy + Alembic |
 | Validation | Pydantic |
-| Server | Uvicorn |
-| Testing | Pytest + httpx |
+| Data lake | Parquet files |
+| Warehouse | DuckDB + dbt |
+| ML | Prophet (Meta) |
+| Dashboard | Streamlit |
 | Containerization | Docker + Docker Compose |
+| Testing | Pytest + httpx |
 
 ---
 
@@ -150,46 +74,26 @@ This guarantees:
 
 ```
 ims-manual/
-├── app/
-│   ├── __init__.py
-│   ├── main.py                       # FastAPI application entry point
-│   ├── database.py                   # SQLAlchemy engine, session, base
-│   ├── api/
-│   │   ├── products.py               # Product API routes
-│   │   └── inventory.py              # Inventory API routes
-│   ├── models/
-│   │   ├── product.py                # Product SQLAlchemy model
-│   │   ├── inventory_event.py        # InventoryEvent model
-│   │   ├── inventory_state.py        # InventoryState projection model
-│   │   └── enums.py                  # EventType enumeration
-│   ├── schemas/
-│   │   ├── product.py                # Product Pydantic schemas
-│   │   └── inventory_event.py        # InventoryEvent Pydantic schemas
-│   └── services/
-│       ├── product_service.py        # Product business logic
-│       └── inventory_service.py      # Inventory business logic
-├── migrations/
-│   ├── versions/                     # Alembic migration files
-│   ├── env.py                        # Alembic environment configuration
-│   └── README                        # Alembic documentation
-├── tests/
-│   ├── conftest.py                   # Pytest fixtures
-│   ├── test_products.py              # Product API tests
-│   ├── test_inventory.py             # Core inventory tests
-│   ├── test_inventory_validation.py  # Validation tests
-│   └── test_idempotency.py           # Idempotency tests
-├── docker/
-│   └── Dockerfile                    # API container definition
-├── docs/                             # Architecture and development notes
-├── data_lake/                        # Future: data lake storage
-├── pipelines/                        # Future: ETL pipelines
-├── docker-compose.yml                # Container orchestration
-├── Makefile                          # Development shortcuts
-├── alembic.ini                       # Alembic configuration
-├── pytest.ini                        # Pytest configuration
-├── requirements.txt                  # Python dependencies
-├── ROADMAP.md                        # Development roadmap
-└── README.md                         # This file
+├── app/                    # FastAPI application
+│   ├── api/                # Route handlers (products, inventory)
+│   ├── models/             # SQLAlchemy models
+│   ├── schemas/            # Pydantic schemas
+│   └── services/           # Business logic
+├── migrations/             # Alembic migrations
+├── tests/                  # Unit, integration, and e2e tests
+├── pipelines/              # PostgreSQL → Parquet export
+├── data_lake/              # Parquet event snapshots
+├── warehouse/              # DuckDB + dbt project
+│   └── ims_warehouse/
+│       ├── models/         # dbt dim/fact models
+│       └── tests/          # dbt data quality tests
+├── feature_store/          # Engineered features for ML
+├── models/                 # Trained Prophet model artifacts
+├── dashboard/              # Streamlit app
+├── docker/                 # Dockerfile
+├── docker-compose.yml
+├── Makefile                # One-command dev workflow
+└── requirements.txt
 ```
 
 ---
@@ -199,123 +103,55 @@ ims-manual/
 ### Prerequisites
 
 - Python 3.11+
-- PostgreSQL 15 (or Docker)
-- Docker & Docker Compose (optional)
+- Docker & Docker Compose
 
-### Local Development
+### Quickstart (Docker)
 
-#### 1. Install Dependencies
+```bash
+# Start PostgreSQL + API
+make up
+
+# Run migrations
+make migrate
+
+# Seed some data, then run the full pipeline
+make export       # PostgreSQL → Parquet
+make warehouse    # build DuckDB warehouse tables
+make dbt-run      # run dbt transformations
+make dbt-test     # run data quality tests
+make features     # build feature store
+make train        # train Prophet models
+
+# Launch dashboard
+streamlit run dashboard/app.py
+```
+
+### Local Development (no Docker)
 
 ```bash
 pip install -r requirements.txt
-```
-
-#### 2. Set Up PostgreSQL
-
-Create a PostgreSQL database named `ims`:
-
-```sql
-CREATE DATABASE ims;
-```
-
-Set the `DATABASE_URL` environment variable:
-
-```bash
 export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/ims"
-```
-
-#### 3. Run Migrations
-
-```bash
 alembic upgrade head
-```
-
-Or use Make:
-
-```bash
-make migrate
-```
-
-#### 4. Start the Server
-
-```bash
 uvicorn app.main:app --reload
 ```
 
-The API will be available at `http://localhost:8000`. API documentation is at `http://localhost:8000/docs`.
-
-### Docker Development
-
-#### Quick Start
-
-```bash
-# Start all services (PostgreSQL + API)
-make up
-
-# Or in detached mode
-make up-d
-```
-
-#### Useful Commands
-
-```bash
-make logs        # View API logs
-make migrate     # Run pending migrations
-make shell       # Get shell access to API container
-make down        # Stop services
-make reset       # Stop and remove volumes (full reset)
-make rebuild     # Rebuild and restart services
-```
+API docs available at `http://localhost:8000/docs`.
 
 ---
 
 ## API Reference
 
-All API endpoints are prefixed with `/api`.
-
 ### Products
-
-#### Create Product
 
 ```http
 POST /api/products
-Content-Type: application/json
-
-{
-    "name": "Widget A",
-    "sku": "WGT-001"
-}
+{ "name": "Widget A", "sku": "WGT-001" }
 ```
-
-**Response** (201 Created):
-
-```json
-{
-    "id": 1,
-    "name": "Widget A",
-    "sku": "WGT-001",
-    "created_at": "2026-03-19T10:30:00Z"
-}
-```
-
-**Error** (409 Conflict) — if SKU already exists:
-
-```json
-{
-    "detail": "Product with this SKU already exists"
-}
-```
-
----
 
 ### Inventory Events
 
-#### Record Inventory Event
-
 ```http
 POST /api/inventory/events
-Content-Type: application/json
-
 {
     "product_id": 1,
     "event_type": "PURCHASE",
@@ -324,212 +160,57 @@ Content-Type: application/json
 }
 ```
 
-**Request Fields**:
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `product_id` | integer | Yes | ID of the product |
-| `event_type` | string | Yes | Type of event (see Event Types) |
-| `quantity` | integer | Yes | Quantity (positive for increases, must be positive for PURCHASE/SALE/DAMAGE/RETURN) |
-| `event_id` | string | Yes | Unique client-provided ID for idempotency |
-
-**Response** (201 Created):
-
-```json
-{
-    "id": 1,
-    "product_id": 1,
-    "event_type": "PURCHASE",
-    "quantity": 100,
-    "event_id": "evt-uuid-123"
-}
-```
-
-**Errors**:
-
-| Status | Condition |
-|--------|-----------|
-| 400 | Invalid quantity (zero, negative for PURCHASE/SALE) or insufficient inventory for SALE/DAMAGE |
-| 404 | Product not found |
-
-#### Get Inventory Level
+| Event Type | Effect | Notes |
+|---|---|---|
+| `PURCHASE` | +quantity | Stock received |
+| `SALE` | -quantity | Oversell protected |
+| `DAMAGE` | -quantity | Oversell protected |
+| `RETURN` | +quantity | Customer return |
+| `ADJUSTMENT` | ±quantity | Manual correction |
 
 ```http
-GET /api/inventory/{product_id}
+GET /api/inventory/{product_id}       # current stock level
+GET /api/inventory/events/{product_id} # full event history
 ```
-
-**Response** (200 OK):
-
-```json
-{
-    "product_id": 1,
-    "inventory": 85
-}
-```
-
-#### Get Product Events
-
-```http
-GET /api/inventory/events/{product_id}
-```
-
-**Response** (200 OK):
-
-```json
-[
-    {
-        "id": 1,
-        "product_id": 1,
-        "event_type": "PURCHASE",
-        "quantity": 100,
-        "event_id": "evt-1"
-    },
-    {
-        "id": 2,
-        "product_id": 1,
-        "event_type": "SALE",
-        "quantity": -15,
-        "event_id": "evt-2"
-    }
-]
-```
-
----
-
-## Database Schema
-
-### Tables
-
-#### products
-
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | SERIAL | PRIMARY KEY |
-| name | VARCHAR | NOT NULL |
-| sku | VARCHAR | UNIQUE, INDEX |
-| created_at | TIMESTAMP | DEFAULT now() |
-
-#### inventory_events
-
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | SERIAL | PRIMARY KEY |
-| event_id | VARCHAR | UNIQUE, NOT NULL |
-| product_id | INTEGER | FOREIGN KEY → products.id, NOT NULL |
-| event_type | ENUM | NOT NULL |
-| quantity | INTEGER | |
-| created_at | TIMESTAMP | DEFAULT now() |
-
-**Indexes**:
-- `ix_inventory_events_product_id`
-- `ix_inventory_events_created_at`
-- `ix_inventory_events_product_created` (composite)
-
-#### inventory_state
-
-| Column | Type | Constraints |
-|--------|------|-------------|
-| product_id | INTEGER | PRIMARY KEY, FOREIGN KEY → products.id |
-| quantity | INTEGER | NOT NULL, DEFAULT 0 |
-
----
-
-## Event Types
-
-| Event | Effect on Inventory | Notes |
-|-------|---------------------|-------|
-| `PURCHASE` | +quantity | Stock received from supplier |
-| `SALE` | -quantity | Protects against overselling |
-| `DAMAGE` | -quantity | Stock damaged/lost |
-| `RETURN` | +quantity | Customer returns |
-| `ADJUSTMENT` | ±quantity | Manual correction (can be positive or negative) |
-
-### Quantity Rules
-
-| Event Type | Quantity Must Be | Notes |
-|------------|------------------|-------|
-| PURCHASE | > 0 | Increases inventory |
-| SALE | > 0 | Decreases inventory, checks availability |
-| DAMAGE | > 0 | Decreases inventory, checks availability |
-| RETURN | > 0 | Increases inventory |
-| ADJUSTMENT | any non-zero | Manual correction |
 
 ---
 
 ## Testing
 
-### Run All Tests
-
 ```bash
-make test
+make test          # unit + integration tests
+make test-e2e      # end-to-end (requires Docker)
+make test-all      # everything
+
+pytest --cov=app tests/  # with coverage
 ```
 
-Or directly:
-
-```bash
-pytest
-```
-
-### Run with Coverage
-
-```bash
-pytest --cov=app tests/
-```
-
-### End-to-End Tests (Docker)
-
-```bash
-make test-e2e
-```
-
-### Run All Tests (Unit + E2E)
-
-```bash
-make test-all
-```
-
-### Test Structure
-
-| File | Description |
-|------|-------------|
-| `test_products.py` | Product creation and SKU uniqueness |
+| Test file | Coverage |
+|---|---|
+| `test_products.py` | Product creation, SKU uniqueness |
 | `test_inventory.py` | Core inventory flow, oversell protection |
-| `test_inventory_validation.py` | Input validation for event types |
+| `test_inventory_validation.py` | Input validation per event type |
 | `test_idempotency.py` | Duplicate event handling |
-| `conftest.py` | Shared pytest fixtures (TestClient, database) |
 
 ---
 
-## Development Workflow
-
-### Making Schema Changes
-
-1. Modify SQLAlchemy models in `app/models/`
-2. Generate a migration:
-   ```bash
-   alembic revision --autogenerate -m "description"
-   ```
-3. Review the generated migration file in `migrations/versions/`
-4. Apply the migration:
-   ```bash
-   alembic upgrade head
-   ```
-
-### Using Makefile
+## Makefile Reference
 
 ```bash
-make up          # Start services
-make logs        # View logs
-make test        # Run tests
-make migrate     # Apply migrations
-make shell       # Shell into container
-make reset       # Full reset (destroys data)
-make export      → export events to data lake
-make warehouse   → build dim_products and dim_dates (Python)
-make dbt-run     → build all dbt models
-make dbt-test    → run data quality tests
-make features    → build feature store from warehouse
-make train       → train Prophet models per product
+make up           # start services
+make down         # stop services
+make reset        # full reset (destroys data)
+make migrate      # apply Alembic migrations
+make logs         # tail API logs
+make shell        # shell into API container
+make export       # export events → Parquet data lake
+make warehouse    # build DuckDB warehouse
+make dbt-run      # run dbt models
+make dbt-test     # run dbt data quality tests
+make features     # build feature store
+make train        # train Prophet models
+make test         # run tests
+make test-e2e     # run e2e tests
 ```
 
 ---
@@ -537,35 +218,33 @@ make train       → train Prophet models per product
 ## Environment Variables
 
 | Variable | Default | Description |
-|----------|---------|-------------|
-| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/ims` | PostgreSQL connection string |
-| `PYTHONPATH` | `/app` | Python module search path |
+|---|---|---|
+| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/ims` | PostgreSQL connection |
+| `PYTHONPATH` | `/app` | Python module path |
+
+Copy `.env.example` to `.env` and adjust as needed.
 
 ---
 
 ## Roadmap
 
-IMS is developed in epochs, evolving from a simple backend to a full data platform. See [ROADMAP.md](ROADMAP.md) for full details.
-
 | Epoch | Focus | Status |
-|-------|-------|--------|
+|---|---|---|
 | 0 | Foundations | ✅ Complete |
-| 1 | Event-Driven Backend | ✅ Complete |
-| 2 | Batch Data Platform | ✅ Complete |
-| 3 | Data Warehouse | ✅ Complete |
-| 4 | Streaming Platform | ✅ Complete |
-| 5 | ML Platform | ✅ Complete |
-| 6 | Application Layer | In Progress |
-| 7 | Advanced Automation | Optional |
+| 1 | Event-Driven Backend (CQRS + event sourcing) | ✅ Complete |
+| 2 | Batch Data Pipeline (Parquet data lake) | ✅ Complete |
+| 3 | Data Warehouse (DuckDB + dbt) | ✅ Complete |
+| 4 | Feature Engineering | ✅ Complete |
+| 5 | ML Platform (Prophet forecasting) | ✅ Complete |
+| 6 | Streamlit Dashboard | ✅ Complete |
+| 7 | Production Hardening + AWS Deployment | In Progress |
 
 ---
 
 ## License
 
-MIT License
-
+[MIT](LICENSE)
 
 ## Author
 
-**Sinan Demir**   
-Computer Science Student @ University of Texas at Dallas
+**Sinan Demir** — Computer Science @ University of Texas at Dallas

@@ -7,9 +7,6 @@ def test_create_product(client):
         }
     )
 
-    print("STATUS:", response.status_code)
-    print("BODY:", response.json())
-
     assert response.status_code == 201
 
 def test_duplicate_sku_returns_409(client):

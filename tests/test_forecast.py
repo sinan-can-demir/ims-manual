@@ -1,9 +1,11 @@
 # tests/test_forecast.py
 
+import os
+import pytest
 import pandas as pd
 from app.services.restock_service import get_restock_recommendation
 from app.services.forecast_service import forecast
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from .utils import create_product
 
 
@@ -82,11 +84,16 @@ def test_restock_clamps_negative_qty(client, db):
     assert result["recommended_order_qty"] >= 0
     assert result["recommended_order_qty"] == 0
 
+_FEATURE_FILE = os.path.join(os.path.dirname(__file__), "..", "feature_store", "daily_sales.parquet")
+_MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
+
+@pytest.mark.skipif(not os.path.exists(_FEATURE_FILE), reason="feature store not built — run make features")
 def test_feature_columns():
-    df = pd.read_parquet("feature_store/daily_sales.parquet")
+    df = pd.read_parquet(_FEATURE_FILE)
     expected = {"product_id", "date", "units_sold", "units_purchased", "net_delta", "rolling_avg_7d"}
     assert set(df.columns) == expected
 
+@pytest.mark.skipif(not os.path.exists(_MODEL_DIR), reason="models not trained — run make train")
 def test_forecast_returns_n_days():
     df = forecast(8, days=7)
     assert len(df) == 7

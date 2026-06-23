@@ -36,6 +36,9 @@ def normalize_quantity(event_type: EventType, quantity: int) -> int:
 
 
 def get_inventory(db: Session, product_id: int) -> int:
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
     state = (
         db.query(InventoryState)
         .filter(InventoryState.product_id == product_id)
