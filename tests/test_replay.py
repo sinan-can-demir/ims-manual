@@ -7,19 +7,25 @@ def test_rebuild_inventory_state(client):
     product_id = product["id"]
 
     # create some events
-    client.post("/api/inventory/events", json={
-        "product_id": product_id,
-        "event_type": "PURCHASE",
-        "quantity": 50,
-        "event_id": "replay-1"
-    })
+    client.post(
+        "/api/inventory/events",
+        json={
+            "product_id": product_id,
+            "event_type": "PURCHASE",
+            "quantity": 50,
+            "event_id": "replay-1",
+        },
+    )
 
-    client.post("/api/inventory/events", json={
-        "product_id": product_id,
-        "event_type": "SALE",
-        "quantity": 10,
-        "event_id": "replay-2"
-    })
+    client.post(
+        "/api/inventory/events",
+        json={
+            "product_id": product_id,
+            "event_type": "SALE",
+            "quantity": 10,
+            "event_id": "replay-2",
+        },
+    )
 
     # Verify initial inventory level
     response_before = client.get(f"/api/inventory/{product_id}")

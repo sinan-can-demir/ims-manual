@@ -1,8 +1,10 @@
 # app/services/restock_service.py
 
 from sqlalchemy.orm import Session
-from app.services.inventory_service import get_inventory
+
 from app.services.forecast_service import forecast
+from app.services.inventory_service import get_inventory
+
 
 def get_restock_recommendation(db: Session, product_id: int) -> dict:
     """

@@ -1,6 +1,7 @@
 import hmac
 import os
-from fastapi import Security, HTTPException
+
+from fastapi import HTTPException, Security
 from fastapi.security.api_key import APIKeyHeader
 
 _API_KEY = os.getenv("API_KEY")

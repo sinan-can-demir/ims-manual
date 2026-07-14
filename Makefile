@@ -1,6 +1,6 @@
 # 📦 IMS Makefile
 
-.PHONY: up down reset rebuild logs test test-e2e test-all test-clean migrate shell warehouse train dashboard
+.PHONY: up down reset rebuild logs test test-e2e test-all test-clean migrate shell warehouse train dashboard lint format
 
 # -------------------------
 # Dev lifecycle
@@ -102,3 +102,12 @@ test-all:
 # -------------------------
 test-clean:
 	rm -rf .pytest_cache
+
+# -------------------------
+# Lint / format
+# -------------------------
+lint:
+	ruff check .
+
+format:
+	ruff format .

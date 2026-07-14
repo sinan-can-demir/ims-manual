@@ -3,14 +3,15 @@
 # fact_inventory_events is now managed by dbt.
 # See warehouse/ims_warehouse/ for the dbt project.
 
-import pandas as pd
-import duckdb
-
 from pathlib import Path
+
+import duckdb
+import pandas as pd
 from sqlalchemy.orm import Session
-from app.models.product import Product
-from app.config import WAREHOUSE_ROOT, INVENTORY_EVENTS_ROOT
+
+from app.config import INVENTORY_EVENTS_ROOT, WAREHOUSE_ROOT
 from app.core.logging import logger
+from app.models.product import Product
 
 
 def _ensure_directories() -> None:
@@ -18,6 +19,7 @@ def _ensure_directories() -> None:
 
 
 _UNSAFE_CHARS = frozenset("'\";\\")
+
 
 def _safe_path(path: Path) -> str:
     """Return the absolute string form of path, rejecting unsafe characters."""
@@ -32,14 +34,14 @@ def build_dim_products(db: Session) -> int:
 
     # 1. Query all products
     products = db.query(Product).all()
- 
+
     # 2. Convert to DataFrame
-    df = pd.DataFrame([{
-        'product_id': p.id,
-        'name': p.name,
-        'sku': p.sku,
-        'created_at': p.created_at
-    } for p in products])
+    df = pd.DataFrame(
+        [
+            {"product_id": p.id, "name": p.name, "sku": p.sku, "created_at": p.created_at}
+            for p in products
+        ]
+    )
 
     # 3. Ensure warehouse directory exists
     _ensure_directories()
@@ -50,21 +52,24 @@ def build_dim_products(db: Session) -> int:
 
     return len(df)
 
+
 def build_dim_dates(start_date, end_date) -> int:
 
     # 1. Get all dates from start_date to end_date
     dates = pd.date_range(start=start_date, end=end_date, freq="D")
 
     # 2. Build a DataFrame using dates
-    df = pd.DataFrame({
-        'date_id':     dates.strftime("%Y-%m-%d"),
-        'year':        dates.year,
-        'month':       dates.month,
-        'day':         dates.day,
-        'quarter':     dates.quarter,
-        'day_of_week': dates.day_name(),
-        'is_weekend':  dates.day_name().isin(["Saturday", "Sunday"])
-    })
+    df = pd.DataFrame(
+        {
+            "date_id": dates.strftime("%Y-%m-%d"),
+            "year": dates.year,
+            "month": dates.month,
+            "day": dates.day,
+            "quarter": dates.quarter,
+            "day_of_week": dates.day_name(),
+            "is_weekend": dates.day_name().isin(["Saturday", "Sunday"]),
+        }
+    )
 
     # 3. Ensure data warehouse exists
     _ensure_directories()
@@ -75,6 +80,7 @@ def build_dim_dates(start_date, end_date) -> int:
 
     # 5. return the row count
     return len(df)
+
 
 def build_fact_table() -> int:
 
@@ -108,13 +114,14 @@ def build_fact_table() -> int:
 
     # 4. write to warehouse/fact_inventory_events.parquet
     file_path = WAREHOUSE_ROOT / "fact_inventory_events.parquet"
-    result.to_parquet(file_path,index=False)
+    result.to_parquet(file_path, index=False)
 
     # 5. Close duckdb connection
     conn.close()
 
     # 6. Return the row count
     return len(result)
+
 
 def build_warehouse(db: Session, start_date: str, end_date: str) -> None:
     _ensure_directories()
@@ -123,8 +130,11 @@ def build_warehouse(db: Session, start_date: str, end_date: str) -> None:
     dates_count = build_dim_dates(start_date, end_date)
     facts_count = build_fact_table()
 
-    logger.info("warehouse_built", extra={
-        "dim_products_rows": products_count,
-        "dim_dates_rows": dates_count,
-        "fact_inventory_events_rows": facts_count,
-    })
+    logger.info(
+        "warehouse_built",
+        extra={
+            "dim_products_rows": products_count,
+            "dim_dates_rows": dates_count,
+            "fact_inventory_events_rows": facts_count,
+        },
+    )

@@ -1,17 +1,14 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Any
 
 import pandas as pd
-from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
-from app.config import INVENTORY_EVENTS_ROOT, CHECKPOINT_FILE
+from app.config import CHECKPOINT_FILE, INVENTORY_EVENTS_ROOT
 from app.core.logging import logger
 from app.models.inventory_event import InventoryEvent
-
 
 CHECKPOINT_KEY = "inventory_events"
 
@@ -50,24 +47,22 @@ def _update_checkpoint(last_id: int) -> None:
     }
     _save_checkpoints(checkpoints)
 
+
 def _build_base_query(db: Session):
-    return (
-        db.query(
-            InventoryEvent.id,
-            InventoryEvent.event_id,
-            InventoryEvent.product_id,
-            InventoryEvent.event_type,
-            InventoryEvent.quantity,
-            InventoryEvent.created_at,
-        )
-        .order_by(InventoryEvent.created_at.asc(), InventoryEvent.id.asc())
-    )
+    return db.query(
+        InventoryEvent.id,
+        InventoryEvent.event_id,
+        InventoryEvent.product_id,
+        InventoryEvent.event_type,
+        InventoryEvent.quantity,
+        InventoryEvent.created_at,
+    ).order_by(InventoryEvent.created_at.asc(), InventoryEvent.id.asc())
 
 
 def _apply_incremental_filter(query, checkpoint: dict | None):
     if not checkpoint:
         return query
- 
+
     last_id = checkpoint["last_id"]
     return query.filter(InventoryEvent.id > last_id)
 
@@ -108,12 +103,7 @@ def _write_partitioned_parquet(df: pd.DataFrame) -> tuple[int, int]:
     grouped = df.groupby(["year", "month", "day"], sort=True)
 
     for (year, month, day), partition_df in grouped:
-        partition_path = (
-            INVENTORY_EVENTS_ROOT
-            / f"year={year}"
-            / f"month={month}"
-            / f"day={day}"
-        )
+        partition_path = INVENTORY_EVENTS_ROOT / f"year={year}" / f"month={month}" / f"day={day}"
         partition_path.mkdir(parents=True, exist_ok=True)
 
         start_id = int(partition_df["id"].min())
@@ -122,9 +112,7 @@ def _write_partitioned_parquet(df: pd.DataFrame) -> tuple[int, int]:
         file_path = partition_path / f"inventory_events_start_{start_id}_end_{end_id}.parquet"
 
         write_df = (
-            partition_df[
-                ["id", "event_id", "product_id", "event_type", "quantity", "created_at"]
-            ]
+            partition_df[["id", "event_id", "product_id", "event_type", "quantity", "created_at"]]
             .sort_values(["created_at", "id"])
             .reset_index(drop=True)
         )

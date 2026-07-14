@@ -1,7 +1,9 @@
 # app/schemas/inventory_event.py
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
 from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
 from app.models.enums import EventType
 
 

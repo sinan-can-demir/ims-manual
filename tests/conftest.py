@@ -1,15 +1,16 @@
 # tests/conftest.py
 
 import os
+from unittest.mock import patch
+
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from unittest.mock import patch
 
 from app.database import Base, get_db
 from app.main import app
-from fastapi.testclient import TestClient
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 _API_KEY = os.getenv("API_KEY")
@@ -28,8 +29,7 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 def pytest_configure(config):
     config.addinivalue_line(
-        "markers",
-        "postgres: requires a real Postgres DB — set TEST_DATABASE_URL to run"
+        "markers", "postgres: requires a real Postgres DB — set TEST_DATABASE_URL to run"
     )
 
 
@@ -67,8 +67,10 @@ def client(db):
 def export_paths(tmp_path):
     events_root = tmp_path / "inventory_events"
     checkpoint = tmp_path / "checkpoints.json"
-    with patch("app.services.export_service.INVENTORY_EVENTS_ROOT", events_root), \
-         patch("app.services.export_service.CHECKPOINT_FILE", checkpoint):
+    with (
+        patch("app.services.export_service.INVENTORY_EVENTS_ROOT", events_root),
+        patch("app.services.export_service.CHECKPOINT_FILE", checkpoint),
+    ):
         yield events_root, checkpoint
 
 
@@ -76,6 +78,8 @@ def export_paths(tmp_path):
 def warehouse_paths(tmp_path):
     warehouse_root = tmp_path / "warehouse"
     events_root = tmp_path / "inventory_events"
-    with patch("app.services.warehouse_service.WAREHOUSE_ROOT", warehouse_root), \
-         patch("app.services.warehouse_service.INVENTORY_EVENTS_ROOT", events_root):
+    with (
+        patch("app.services.warehouse_service.WAREHOUSE_ROOT", warehouse_root),
+        patch("app.services.warehouse_service.INVENTORY_EVENTS_ROOT", events_root),
+    ):
         yield warehouse_root

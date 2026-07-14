@@ -2,6 +2,7 @@
 
 from .utils import create_product, purchase
 
+
 def test_limit(client, db):
     product = create_product(client)
     pid = product["id"]
@@ -17,7 +18,7 @@ def test_limit(client, db):
 def test_offset(client, db):
     product = create_product(client)
     pid = product["id"]
-    
+
     e1 = purchase(client, pid, 10)
     purchase(client, pid, 10)
     purchase(client, pid, 10)

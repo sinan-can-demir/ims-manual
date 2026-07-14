@@ -1,6 +1,6 @@
 # models/inventory_state.py
 
-from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy import Column, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -18,17 +18,9 @@ class InventoryState(Base):
     __tablename__ = "inventory_state"
 
     # One row per product
-    product_id = Column(
-        Integer,
-        ForeignKey("products.id"),
-        primary_key=True
-    )
+    product_id = Column(Integer, ForeignKey("products.id"), primary_key=True)
 
-    quantity = Column(
-        Integer,
-        nullable=False,
-        server_default="0"
-    )
+    quantity = Column(Integer, nullable=False, server_default="0")
 
     # Optional relationship
     product = relationship("Product")

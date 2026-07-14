@@ -1,5 +1,6 @@
 from .utils import create_product
 
+
 def test_idempotent_event(client):
 
     product = create_product(client)
@@ -9,7 +10,7 @@ def test_idempotent_event(client):
         "product_id": product_id,
         "event_type": "PURCHASE",
         "quantity": 50,
-        "event_id": "same-event"
+        "event_id": "same-event",
     }
 
     # First request

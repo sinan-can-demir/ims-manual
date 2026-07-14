@@ -1,14 +1,14 @@
 # app/main.py
 
+import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Depends
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import os
 
-from app.api.products import router as products_router
-from app.api.inventory import router as inventory_router
 from app.api.forecast import router as forecast_router
+from app.api.inventory import router as inventory_router
+from app.api.products import router as products_router
 from app.core.auth import require_api_key
 from app.core.logging import logger
 

@@ -1,15 +1,16 @@
 # app/api/forecast.py
 
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, HTTPException, Depends
 
+from app.core.logging import logger
 from app.database import get_db
-from app.schemas.forecast import ForecastResponse, ForecastPoint, RestockResponse
+from app.schemas.forecast import ForecastPoint, ForecastResponse, RestockResponse
 from app.services.forecast_service import forecast
 from app.services.restock_service import get_restock_recommendation
-from app.core.logging import logger
 
 router = APIRouter(prefix="/forecast", tags=["forecast"])
+
 
 @router.get("/{product_id}", response_model=ForecastResponse)
 def get_forecast(product_id: int, days: int = 7):
@@ -40,6 +41,7 @@ def get_forecast(product_id: int, days: int = 7):
         forecast_days=days,
         predictions=predictions,
     )
+
 
 @router.get("/restock/{product_id}", response_model=RestockResponse)
 def get_restock(product_id: int, db: Session = Depends(get_db)):

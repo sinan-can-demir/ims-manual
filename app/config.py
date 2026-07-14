@@ -1,7 +1,7 @@
 # app/config.py
 
-from pathlib import Path
 import os
+from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -22,5 +22,5 @@ WAREHOUSE_END_DATE = os.getenv("WAREHOUSE_END_DATE", "2030-12-31")
 # -------------------
 # Feature
 # -------------------
-FEATURE_STORE_PATH=Path(os.getenv("FEATURE_STORE_PATH", BASE_DIR / "feature_store"))
+FEATURE_STORE_PATH = Path(os.getenv("FEATURE_STORE_PATH", BASE_DIR / "feature_store"))
 MODELS_DIR = Path(os.getenv("MODELS_DIR", BASE_DIR / "models"))

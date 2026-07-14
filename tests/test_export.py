@@ -1,15 +1,16 @@
 # tests/test_export.py
 
-import pandas as pd
-import pytest
 
-from unittest.mock import patch
-from .utils import create_product, purchase
+import pandas as pd
+
 from app.services.export_service import export_inventory_events
+
+from .utils import create_product, purchase
 
 # ---------------------------------------------------------------------------
 # Test 1 — Full export creates files and returns correct metadata
 # ---------------------------------------------------------------------------
+
 
 def test_full_export_creates_files(client, db, export_paths):
     """
@@ -40,6 +41,7 @@ def test_full_export_creates_files(client, db, export_paths):
 # Test 2 — Partition directory structure is correct
 # ---------------------------------------------------------------------------
 
+
 def test_partition_structure(client, db, export_paths):
     """
     Exported files must sit inside year=.../month=.../day=... directories.
@@ -57,14 +59,15 @@ def test_partition_structure(client, db, export_paths):
 
     for f in parquet_files:
         parts = f.parts
-        assert any(p.startswith("year=")  for p in parts), f"Missing year= in path: {f}"
+        assert any(p.startswith("year=") for p in parts), f"Missing year= in path: {f}"
         assert any(p.startswith("month=") for p in parts), f"Missing month= in path: {f}"
-        assert any(p.startswith("day=")   for p in parts), f"Missing day= in path: {f}"
+        assert any(p.startswith("day=") for p in parts), f"Missing day= in path: {f}"
 
 
 # ---------------------------------------------------------------------------
 # Test 3 — Exported parquet schema matches expected columns
 # ---------------------------------------------------------------------------
+
 
 def test_export_schema_columns(client, db, export_paths):
     """
@@ -94,6 +97,7 @@ def test_export_schema_columns(client, db, export_paths):
 # Test 4 — Incremental export only exports new events
 # ---------------------------------------------------------------------------
 
+
 def test_incremental_export_only_new_events(client, db, export_paths):
     """
     First export (2 events) writes a checkpoint.
@@ -118,14 +122,13 @@ def test_incremental_export_only_new_events(client, db, export_paths):
 
     # Second run — should only pick up the new event
     second = export_inventory_events(db, incremental=True)
-    assert second["rows_exported"] == 1, (
-        f"Expected 1 new row, got {second['rows_exported']}"
-    )
+    assert second["rows_exported"] == 1, f"Expected 1 new row, got {second['rows_exported']}"
 
 
 # ---------------------------------------------------------------------------
 # Test 5 — Re-running incremental with no new events exports nothing
 # ---------------------------------------------------------------------------
+
 
 def test_incremental_no_new_events(client, db, export_paths):
     """
@@ -150,6 +153,7 @@ def test_incremental_no_new_events(client, db, export_paths):
 # ---------------------------------------------------------------------------
 # Test 6 — Empty export (no events in DB) is handled gracefully
 # ---------------------------------------------------------------------------
+
 
 def test_empty_export_no_crash(db, export_paths):
     """

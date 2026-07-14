@@ -1,0 +1,9 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+# Default ruleset (E/F) plus import sorting. Kept intentionally small —
+# this is a solo/learning project, not enforcing a large style guide.
+select = ["E", "F", "I"]
