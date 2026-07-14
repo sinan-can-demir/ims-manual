@@ -1,6 +1,6 @@
 # IMS — Inventory Management System
 
-[![CI](https://github.com/eisensenpou/ims-manual/actions/workflows/ci.yml/badge.svg)](https://github.com/eisensenpou/ims-manual/actions/workflows/ci.yml)
+[![CI](https://github.com/sinan-can-demir/ims-manual/actions/workflows/ci.yml/badge.svg)](https://github.com/sinan-can-demir/ims-manual/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 An event-driven inventory platform with a full analytics pipeline and ML-powered demand forecasting. Built from scratch as a learning project covering data engineering, backend systems, and machine learning.
@@ -8,7 +8,7 @@ An event-driven inventory platform with a full analytics pipeline and ML-powered
 **Stack:** FastAPI · PostgreSQL · dbt · DuckDB · Prophet · Streamlit · Docker
 
 > **Project status:** actively developed learning project, not a hardened production system.
-> Auth is a single shared API key (see [SECURITY.md](SECURITY.md) for what that does and doesn't protect against), and AWS deployment is still in progress ([Epoch 7](ROADMAP.md)). Local/Docker use is solid; think twice before exposing this on the open internet as-is.
+> Auth is a single shared API key (see [SECURITY.md](SECURITY.md) for what that does and doesn't protect against). Deployment beyond local Docker is in progress ([Epoch 7](ROADMAP.md)) — see [Deployment](#deployment) below.
 
 ---
 
@@ -105,7 +105,11 @@ ims-manual/
 ├── models/                 # Trained Prophet model artifacts (gitignored — run `make train` to generate)
 ├── dashboard/              # Streamlit app
 ├── docker/                 # Dockerfile
-├── docker-compose.yml
+├── docker-compose.yml            # local dev
+├── docker-compose.prod.yml       # self-hosted prod hardening (overlay)
+├── docker-compose.caddy.yml      # optional automatic HTTPS (overlay)
+├── docs/deployment/        # self-hosted deployment guide
+├── infra/                  # Terraform for AWS (enterprise deployment)
 ├── Makefile                # One-command dev workflow
 └── requirements.txt
 ```
@@ -150,6 +154,24 @@ uvicorn app.main:app --reload
 ```
 
 API docs available at `http://localhost:8000/docs`.
+
+---
+
+## Deployment
+
+Two paths, depending on what you're running this for:
+
+- **[Self-hosted](docs/deployment/self-hosted.md)** (recommended default) —
+  any VPS, ~$5-20/month, no cloud account, fully open-source tooling
+  (Docker Compose + optional [Caddy](https://caddyserver.com/) for automatic
+  HTTPS). Lowest barrier to actually running this for real use.
+- **[AWS](infra/README.md)** (enterprise) — Terraform for ECS Fargate + RDS +
+  ALB with least-privilege IAM and OIDC-based CI/CD, for teams already
+  running on AWS. More capable (managed failover, autoscaling headroom) and
+  more expensive (~$75-85/month) than the self-hosted path.
+
+Both deploy the same Docker image; neither is required to run the project
+locally (see Getting Started above).
 
 ---
 
@@ -253,6 +275,8 @@ make format       # ruff format .
 | `MODELS_DIR` | `./models` | Trained Prophet model output path |
 | `WAREHOUSE_START_DATE` / `WAREHOUSE_END_DATE` | `2020-01-01` / `2030-12-31` | Date range for the generated `dim_dates` warehouse table |
 | `PYTHONPATH` | `/app` | Python module path (set inside the Docker container) |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `postgres` / unset / `ims` | `docker-compose.prod.yml` only — compose-level substitution to build `DATABASE_URL`, see [self-hosted deployment](docs/deployment/self-hosted.md) |
+| `DOMAIN` | unset | `docker-compose.caddy.yml` only — your domain, for automatic HTTPS |
 
 Copy `.env.example` to `.env` and adjust as needed.
 
@@ -269,7 +293,7 @@ Copy `.env.example` to `.env` and adjust as needed.
 | 4 | Feature Engineering | ✅ Complete |
 | 5 | ML Platform (Prophet forecasting) | ✅ Complete |
 | 6 | Streamlit Dashboard | ✅ Complete |
-| 7 | Production Hardening + AWS Deployment | In Progress |
+| 7 | Production Hardening + Deployment (self-hosted + AWS) | In Progress |
 
 ---
 
