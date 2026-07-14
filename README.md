@@ -1,8 +1,14 @@
 # IMS — Inventory Management System
 
+[![CI](https://github.com/eisensenpou/ims-manual/actions/workflows/ci.yml/badge.svg)](https://github.com/eisensenpou/ims-manual/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 An event-driven inventory platform with a full analytics pipeline and ML-powered demand forecasting. Built from scratch as a learning project covering data engineering, backend systems, and machine learning.
 
 **Stack:** FastAPI · PostgreSQL · dbt · DuckDB · Prophet · Streamlit · Docker
+
+> **Project status:** actively developed learning project, not a hardened production system.
+> Auth is a single shared API key (see [SECURITY.md](SECURITY.md) for what that does and doesn't protect against), and AWS deployment is still in progress ([Epoch 7](ROADMAP.md)). Local/Docker use is solid; think twice before exposing this on the open internet as-is.
 
 ---
 
@@ -12,6 +18,14 @@ An event-driven inventory platform with a full analytics pipeline and ML-powered
 - Exports events to a **Parquet data lake**, transforms them in a **DuckDB warehouse** via dbt
 - Trains a **Prophet forecasting model** per product on historical demand
 - Serves a **Streamlit dashboard** with live inventory levels, event history, and 30-day demand forecasts
+
+<!--
+TODO: add a screenshot/GIF of the dashboard here once available.
+  1. make dashboard
+  2. screenshot the running app
+  3. save under docs/images/dashboard.png
+  4. replace this comment with: ![Dashboard](docs/images/dashboard.png)
+-->
 
 ---
 
@@ -141,6 +155,10 @@ API docs available at `http://localhost:8000/docs`.
 
 ## API Reference
 
+All routes below live under `/api` and require an `X-API-Key` header if
+`API_KEY` is set (see [Environment Variables](#environment-variables) and
+[SECURITY.md](SECURITY.md)). `/health` is always unauthenticated.
+
 ### Products
 
 ```http
@@ -188,9 +206,11 @@ pytest --cov=app tests/  # with coverage
 | Test file | Coverage |
 |---|---|
 | `test_products.py` | Product creation, SKU uniqueness |
-| `test_inventory.py` | Core inventory flow, oversell protection |
+| `test_inventory.py` | Core inventory flow, oversell protection (Postgres-only) |
 | `test_inventory_validation.py` | Input validation per event type |
 | `test_idempotency.py` | Duplicate event handling |
+| `test_auth.py` | API-key auth: exempt `/health`, missing/wrong/correct key, auth-disabled mode |
+| `test_forecast.py` | Forecast/restock endpoints, including 404s on nonexistent products |
 
 ---
 
@@ -211,6 +231,8 @@ make features     # build feature store
 make train        # train Prophet models
 make test         # run tests
 make test-e2e     # run e2e tests
+make lint         # ruff check .
+make format       # ruff format .
 ```
 
 ---
@@ -220,7 +242,17 @@ make test-e2e     # run e2e tests
 | Variable | Default | Description |
 |---|---|---|
 | `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/ims` | PostgreSQL connection |
-| `PYTHONPATH` | `/app` | Python module path |
+| `TEST_DATABASE_URL` | unset | Postgres URL for integration tests; unset falls back to in-memory SQLite (postgres-marked tests skip) |
+| `DB_POOL_SIZE` | `5` | SQLAlchemy connection pool size |
+| `DB_MAX_OVERFLOW` | `10` | Extra connections allowed above pool size under load |
+| `CORS_ORIGINS` | `http://localhost:8501` | Comma-separated list of allowed CORS origins |
+| `API_KEY` | unset | Shared API key for all `/api` routes; unset disables auth (local dev only — see [SECURITY.md](SECURITY.md)) |
+| `DATA_LAKE_ROOT` | `./data_lake` | Parquet data lake root |
+| `WAREHOUSE_ROOT` | `./warehouse` | DuckDB warehouse root |
+| `FEATURE_STORE_PATH` | `./feature_store` | Feature store output path |
+| `MODELS_DIR` | `./models` | Trained Prophet model output path |
+| `WAREHOUSE_START_DATE` / `WAREHOUSE_END_DATE` | `2020-01-01` / `2030-12-31` | Date range for the generated `dim_dates` warehouse table |
+| `PYTHONPATH` | `/app` | Python module path (set inside the Docker container) |
 
 Copy `.env.example` to `.env` and adjust as needed.
 
@@ -240,6 +272,13 @@ Copy `.env.example` to `.env` and adjust as needed.
 | 7 | Production Hardening + AWS Deployment | In Progress |
 
 ---
+
+## Contributing
+
+Contributions and issue reports are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md)
+for local setup, running tests, and PR conventions. Please review
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) as well. Security issues should go
+through [SECURITY.md](SECURITY.md) rather than a public issue.
 
 ## License
 
