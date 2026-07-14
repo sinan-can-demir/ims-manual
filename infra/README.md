@@ -1,9 +1,16 @@
-# AWS Infrastructure
+# AWS Infrastructure (Enterprise Deployment)
 
 Terraform for the IMS API on ECS Fargate — sub-phase 1 of the AWS deployment
 (ROADMAP.md Epoch 7 Phase 5). Deploys the API + RDS Postgres behind an ALB.
 **Not included yet**: the data pipeline (S3), the Streamlit dashboard, a
 custom domain/HTTPS. See the root `ROADMAP.md` for what's planned next.
+
+This is the **enterprise path** — for teams already running on AWS who want
+a `terraform apply`-and-go deployment. If you just want to run IMS somewhere
+cheaply and simply (a VPS, no cloud account), see
+[`docs/deployment/self-hosted.md`](../docs/deployment/self-hosted.md) instead
+— same Docker image, ~$5-20/month instead of ~$75-85/month, fully
+open-source tooling end to end.
 
 **Estimated cost: ~$75-85/month**, mostly the NAT Gateway (~$35) and ALB
 (~$18) — the cost of using private subnets rather than the cheapest possible
