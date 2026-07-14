@@ -1,5 +1,6 @@
 # tests/conftest.py
 
+import os
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -10,18 +11,34 @@ from app.database import Base, get_db
 from app.main import app
 from fastapi.testclient import TestClient
 
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
+_API_KEY = os.getenv("API_KEY")
 
-engine = create_engine(
-    "sqlite://",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
+if TEST_DATABASE_URL:
+    engine = create_engine(TEST_DATABASE_URL)
+else:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
 
-TestingSessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "postgres: requires a real Postgres DB — set TEST_DATABASE_URL to run"
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    if not TEST_DATABASE_URL:
+        skip = pytest.mark.skip(reason="requires Postgres — set TEST_DATABASE_URL env var")
+        for item in items:
+            if "postgres" in item.keywords:
+                item.add_marker(skip)
 
 
 @pytest.fixture(scope="function")
@@ -41,7 +58,9 @@ def client(db):
         yield db
 
     app.dependency_overrides[get_db] = override_get_db
-    return TestClient(app)
+    # Pass API key header automatically if auth is enabled in the test environment
+    headers = {"X-API-Key": _API_KEY} if _API_KEY else {}
+    return TestClient(app, headers=headers)
 
 
 @pytest.fixture

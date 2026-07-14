@@ -1,3 +1,4 @@
+import pytest
 from .utils import create_product
 
 def test_inventory_flow(client):
@@ -28,6 +29,7 @@ def test_inventory_flow(client):
     assert response.json()["quantity"] == 40
 
 
+@pytest.mark.postgres
 def test_oversell_protection(client):
 
     product = create_product(client)
