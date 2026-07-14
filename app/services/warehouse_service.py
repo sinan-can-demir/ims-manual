@@ -6,6 +6,7 @@
 import pandas as pd
 import duckdb
 
+from pathlib import Path
 from sqlalchemy.orm import Session
 from app.models.product import Product
 from app.config import WAREHOUSE_ROOT, INVENTORY_EVENTS_ROOT
@@ -14,6 +15,17 @@ from app.core.logging import logger
 
 def _ensure_directories() -> None:
     WAREHOUSE_ROOT.mkdir(parents=True, exist_ok=True)
+
+
+_UNSAFE_CHARS = frozenset("'\";\\")
+
+def _safe_path(path: Path) -> str:
+    """Return the absolute string form of path, rejecting unsafe characters."""
+    resolved = str(path.resolve())
+    bad = _UNSAFE_CHARS & set(resolved)
+    if bad:
+        raise ValueError(f"Path contains unsafe characters {bad!r}: {resolved}")
+    return resolved
 
 
 def build_dim_products(db: Session) -> int:
@@ -78,6 +90,9 @@ def build_fact_table() -> int:
     # But DuckDB uses a hash join here — O(n + m) where n is events and m is products.
     # Products table is small so the hash table fits in memory entirely,
     # making this effectively O(n) in practice.
+    events_path = _safe_path(INVENTORY_EVENTS_ROOT)
+    products_path = _safe_path(WAREHOUSE_ROOT / "dim_products.parquet")
+
     result = conn.execute(f"""
     SELECT
         e.event_id,
@@ -86,8 +101,8 @@ def build_fact_table() -> int:
         e.event_type,
         e.quantity,
         e.created_at
-    FROM read_parquet('{INVENTORY_EVENTS_ROOT}/**/*.parquet') e
-    JOIN read_parquet('{WAREHOUSE_ROOT}/dim_products.parquet') p
+    FROM read_parquet('{events_path}/**/*.parquet') e
+    JOIN read_parquet('{products_path}') p
         ON e.product_id = p.product_id
     """).df()  # .df() converts directly to pandas DataFrame
 
