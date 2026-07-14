@@ -200,13 +200,16 @@ Phase 4 — Testing
       - Build and lint Docker image  
 
 Phase 5 — AWS deployment  
+Sub-phase 1 (core API + RDS on ECS Fargate) is scoped and its Terraform is
+written under infra/ — pending the operator's manual bootstrap + first
+`terraform apply` (real AWS resources, not yet live). See infra/README.md.  
+[~] Configure AWS infrastructure (ECS Fargate, RDS PostgreSQL, ALB) — Terraform ready, not yet applied  
+[~] Store secrets in AWS Secrets Manager, inject as environment variables — wired in Terraform, not yet applied  
+[~] Wire CloudWatch Logs — wired in Terraform, not yet applied  
 [ ] Move data lake from local filesystem to S3  
-      (update export_service.py to write Parquet files to an S3 bucket)  
-[ ] Configure AWS infrastructure (ECS Fargate or EC2, RDS PostgreSQL, S3, ALB)  
-[ ] Store secrets in AWS Secrets Manager, inject as environment variables  
-[ ] Wire CloudWatch Logs (stdout logging already works — just needs log group config)   
-[ ] Deploy dashboard (Streamlit on ECS or EC2, update to read feature store from S3)  
-[ ] Set up domain + HTTPS via ACM + ALB  
+      (update export_service.py to write Parquet files to an S3 bucket — sub-phase 2)  
+[ ] Deploy dashboard (Streamlit on ECS or EC2, update to read feature store from S3) — sub-phase 2  
+[ ] Set up domain + HTTPS via ACM + ALB — sub-phase 2, deferred until a domain is available  
 
 Milestone: App running on AWS with real auth, secrets management, and CI/CD  
 
