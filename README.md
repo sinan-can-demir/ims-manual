@@ -88,7 +88,7 @@ ims-manual/
 │       ├── models/         # dbt dim/fact models
 │       └── tests/          # dbt data quality tests
 ├── feature_store/          # Engineered features for ML
-├── models/                 # Trained Prophet model artifacts
+├── models/                 # Trained Prophet model artifacts (gitignored — run `make train` to generate)
 ├── dashboard/              # Streamlit app
 ├── docker/                 # Dockerfile
 ├── docker-compose.yml

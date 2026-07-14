@@ -68,3 +68,10 @@ warehouse/ims_warehouse/target
 
 # feature_store parquets
 feature_store/*.parquet
+
+# trained model artifacts (regenerate with `make train`)
+models/*.pkl
+
+# coverage data
+.coverage
+.coverage.*
