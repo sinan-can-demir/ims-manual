@@ -124,9 +124,7 @@ def test_feature_columns():
     assert set(df.columns) == expected
 
 
-@pytest.mark.skipif(
-    not os.path.exists(_MODEL_FILE_8), reason="models not trained — run make train"
-)
+@pytest.mark.skipif(not os.path.exists(_MODEL_FILE_8), reason="models not trained — run make train")
 def test_forecast_returns_n_days():
     df = forecast(8, days=7)
     assert len(df) == 7
