@@ -101,3 +101,12 @@ def test_forecast_returns_n_days():
 def test_forecast_endpoint_no_model(client):
     response = client.get("/api/forecast/99999")
     assert response.status_code == 404
+
+def test_restock_endpoint_nonexistent_product(client):
+    response = client.get("/api/forecast/restock/99999")
+    assert response.status_code == 404
+
+def test_restock_recommendation_nonexistent_product(db):
+    with pytest.raises(Exception) as exc_info:
+        get_restock_recommendation(db, 99999)
+    assert getattr(exc_info.value, "status_code", None) == 404
