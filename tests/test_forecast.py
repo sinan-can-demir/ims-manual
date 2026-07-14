@@ -105,7 +105,7 @@ def test_restock_clamps_negative_qty(client, db):
 _FEATURE_FILE = os.path.join(
     os.path.dirname(__file__), "..", "feature_store", "daily_sales.parquet"
 )
-_MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
+_MODEL_FILE_8 = os.path.join(os.path.dirname(__file__), "..", "models", "prophet_8.pkl")
 
 _FEATURE_SKIP_REASON = "feature store not built — run make features"
 
@@ -124,7 +124,7 @@ def test_feature_columns():
     assert set(df.columns) == expected
 
 
-@pytest.mark.skipif(not os.path.exists(_MODEL_DIR), reason="models not trained — run make train")
+@pytest.mark.skipif(not os.path.exists(_MODEL_FILE_8), reason="models not trained — run make train")
 def test_forecast_returns_n_days():
     df = forecast(8, days=7)
     assert len(df) == 7
