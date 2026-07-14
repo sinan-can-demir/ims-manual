@@ -1,8 +1,8 @@
 from collections import defaultdict
+
 from sqlalchemy.orm import Session
 
 from app.core.logging import logger
-
 from app.models.inventory_event import InventoryEvent
 from app.models.inventory_state import InventoryState
 
@@ -35,9 +35,7 @@ def rebuild_inventory_state(db: Session) -> dict:
 
     # Append new rows for products that have events
     for product_id, quantity in quantities.items():
-        rebuilt_rows.append(
-            InventoryState(product_id=product_id, quantity=quantity)
-        )
+        rebuilt_rows.append(InventoryState(product_id=product_id, quantity=quantity))
 
     # Bulk insert new state rows
     if rebuilt_rows:
@@ -47,10 +45,7 @@ def rebuild_inventory_state(db: Session) -> dict:
     db.commit()
     logger.info(
         "inventory_replay_completed",
-        extra={
-            "events_processed": len(events),
-            "products_rebuilt": len(rebuilt_rows)
-        }
+        extra={"events_processed": len(events), "products_rebuilt": len(rebuilt_rows)},
     )
 
     # Return summary of the rebuild process

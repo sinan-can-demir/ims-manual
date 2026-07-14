@@ -1,7 +1,9 @@
 # app/schemas/forecast.py
 
-from pydantic import BaseModel, ConfigDict
 from datetime import date
+
+from pydantic import BaseModel, ConfigDict
+
 
 class ForecastPoint(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -10,10 +12,12 @@ class ForecastPoint(BaseModel):
     lower_bound: float
     upper_bound: float
 
+
 class ForecastResponse(BaseModel):
     product_id: int
     forecast_days: int
     predictions: list[ForecastPoint]
+
 
 class RestockResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

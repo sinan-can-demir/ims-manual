@@ -1,8 +1,9 @@
-from app.services.product_service import create_product
-from app.schemas.product import ProductCreate, ProductResponse
-from app.database import get_db
-from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.schemas.product import ProductCreate, ProductResponse
+from app.services.product_service import create_product
 
 router = APIRouter()
 

@@ -3,30 +3,45 @@
 # fact_inventory_events is now managed by dbt.
 # See warehouse/ims_warehouse/ for the dbt project.
 
-import pandas as pd
-import duckdb
+from pathlib import Path
 
+import duckdb
+import pandas as pd
 from sqlalchemy.orm import Session
+
+from app.config import INVENTORY_EVENTS_ROOT, WAREHOUSE_ROOT
+from app.core.logging import logger
 from app.models.product import Product
-from app.config import WAREHOUSE_ROOT, INVENTORY_EVENTS_ROOT
 
 
 def _ensure_directories() -> None:
     WAREHOUSE_ROOT.mkdir(parents=True, exist_ok=True)
 
 
+_UNSAFE_CHARS = frozenset("'\";\\")
+
+
+def _safe_path(path: Path) -> str:
+    """Return the absolute string form of path, rejecting unsafe characters."""
+    resolved = str(path.resolve())
+    bad = _UNSAFE_CHARS & set(resolved)
+    if bad:
+        raise ValueError(f"Path contains unsafe characters {bad!r}: {resolved}")
+    return resolved
+
+
 def build_dim_products(db: Session) -> int:
 
     # 1. Query all products
     products = db.query(Product).all()
- 
+
     # 2. Convert to DataFrame
-    df = pd.DataFrame([{
-        'product_id': p.id,
-        'name': p.name,
-        'sku': p.sku,
-        'created_at': p.created_at
-    } for p in products])
+    df = pd.DataFrame(
+        [
+            {"product_id": p.id, "name": p.name, "sku": p.sku, "created_at": p.created_at}
+            for p in products
+        ]
+    )
 
     # 3. Ensure warehouse directory exists
     _ensure_directories()
@@ -37,21 +52,24 @@ def build_dim_products(db: Session) -> int:
 
     return len(df)
 
+
 def build_dim_dates(start_date, end_date) -> int:
 
     # 1. Get all dates from start_date to end_date
     dates = pd.date_range(start=start_date, end=end_date, freq="D")
 
     # 2. Build a DataFrame using dates
-    df = pd.DataFrame({
-        'date_id':     dates.strftime("%Y-%m-%d"),
-        'year':        dates.year,
-        'month':       dates.month,
-        'day':         dates.day,
-        'quarter':     dates.quarter,
-        'day_of_week': dates.day_name(),
-        'is_weekend':  dates.day_name().isin(["Saturday", "Sunday"])
-    })
+    df = pd.DataFrame(
+        {
+            "date_id": dates.strftime("%Y-%m-%d"),
+            "year": dates.year,
+            "month": dates.month,
+            "day": dates.day,
+            "quarter": dates.quarter,
+            "day_of_week": dates.day_name(),
+            "is_weekend": dates.day_name().isin(["Saturday", "Sunday"]),
+        }
+    )
 
     # 3. Ensure data warehouse exists
     _ensure_directories()
@@ -62,6 +80,7 @@ def build_dim_dates(start_date, end_date) -> int:
 
     # 5. return the row count
     return len(df)
+
 
 def build_fact_table() -> int:
 
@@ -77,6 +96,9 @@ def build_fact_table() -> int:
     # But DuckDB uses a hash join here — O(n + m) where n is events and m is products.
     # Products table is small so the hash table fits in memory entirely,
     # making this effectively O(n) in practice.
+    events_path = _safe_path(INVENTORY_EVENTS_ROOT)
+    products_path = _safe_path(WAREHOUSE_ROOT / "dim_products.parquet")
+
     result = conn.execute(f"""
     SELECT
         e.event_id,
@@ -85,14 +107,14 @@ def build_fact_table() -> int:
         e.event_type,
         e.quantity,
         e.created_at
-    FROM read_parquet('{INVENTORY_EVENTS_ROOT}/**/*.parquet') e
-    JOIN read_parquet('{WAREHOUSE_ROOT}/dim_products.parquet') p
+    FROM read_parquet('{events_path}/**/*.parquet') e
+    JOIN read_parquet('{products_path}') p
         ON e.product_id = p.product_id
     """).df()  # .df() converts directly to pandas DataFrame
 
     # 4. write to warehouse/fact_inventory_events.parquet
     file_path = WAREHOUSE_ROOT / "fact_inventory_events.parquet"
-    result.to_parquet(file_path,index=False)
+    result.to_parquet(file_path, index=False)
 
     # 5. Close duckdb connection
     conn.close()
@@ -100,25 +122,19 @@ def build_fact_table() -> int:
     # 6. Return the row count
     return len(result)
 
-def build_warehouse(db: Session, start_date: str, end_date: str) -> bool:
-    try:
-        # 1. Ensure directory exists
-        _ensure_directories()
 
-        # 2. Build dim products, dim dates and fact tables.
-        products_count = build_dim_products(db)
-        dates_count = build_dim_dates(start_date, end_date)
-        facts_count = build_fact_table()
+def build_warehouse(db: Session, start_date: str, end_date: str) -> None:
+    _ensure_directories()
 
-        # 3. Print the row counts
-        print(f"dim_products: {products_count} rows")
-        print(f"dim_dates: {dates_count} rows")
-        print(f"fact_inventory_events: {facts_count} rows")
+    products_count = build_dim_products(db)
+    dates_count = build_dim_dates(start_date, end_date)
+    facts_count = build_fact_table()
 
-        # 4. return true if run successfully
-        return True
-
-    except Exception as e:
-        # Catch errors and return false
-        print(f"Warehouse build failed: {e}")
-        return False
+    logger.info(
+        "warehouse_built",
+        extra={
+            "dim_products_rows": products_count,
+            "dim_dates_rows": dates_count,
+            "fact_inventory_events_rows": facts_count,
+        },
+    )

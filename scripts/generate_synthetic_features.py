@@ -10,10 +10,10 @@
 # Usage:
 #   python scripts/generate_synthetic_features.py
 
-import pandas as pd
-import numpy as np
-from pathlib import Path
 from datetime import date, timedelta
+
+import numpy as np
+import pandas as pd
 
 from app.config import FEATURE_STORE_PATH
 
@@ -32,21 +32,21 @@ PRODUCTS = [
         "name": "Widget A",
         "mean_demand": 15,
         "std": 4,
-        "trend": 0.2,       # slight upward trend over 30 days
+        "trend": 0.2,  # slight upward trend over 30 days
     },
     {
         "product_id": 9,
         "name": "Widget B",
         "mean_demand": 5,
         "std": 2,
-        "trend": 0.0,       # flat demand
+        "trend": 0.0,  # flat demand
     },
     {
         "product_id": 10,
         "name": "Widget C",
         "mean_demand": 30,
         "std": 8,
-        "trend": -0.3,      # slight downward trend
+        "trend": -0.3,  # slight downward trend
     },
 ]
 
@@ -56,13 +56,13 @@ PRODUCTS = [
 # Real inventory systems often see lower sales on weekends
 # -------------------------------------------------------------------
 WEEKLY_PATTERN = {
-    0: 1.2,   # Monday    — high
-    1: 1.1,   # Tuesday
-    2: 1.0,   # Wednesday — baseline
-    3: 1.0,   # Thursday
-    4: 1.3,   # Friday    — highest
-    5: 0.6,   # Saturday  — low
-    6: 0.5,   # Sunday    — lowest
+    0: 1.2,  # Monday    — high
+    1: 1.1,  # Tuesday
+    2: 1.0,  # Wednesday — baseline
+    3: 1.0,  # Thursday
+    4: 1.3,  # Friday    — highest
+    5: 0.6,  # Saturday  — low
+    6: 0.5,  # Sunday    — lowest
 }
 
 
@@ -98,23 +98,20 @@ def generate_product_features(product: dict, dates: list[date]) -> pd.DataFrame:
 
         net_delta = units_purchased + returns - units_sold
 
-        rows.append({
-            "product_id": product["product_id"],
-            "date":       d.isoformat(),
-            "units_sold": float(units_sold),
-            "units_purchased": float(units_purchased + returns),
-            "net_delta":  float(net_delta),
-        })
+        rows.append(
+            {
+                "product_id": product["product_id"],
+                "date": d.isoformat(),
+                "units_sold": float(units_sold),
+                "units_purchased": float(units_purchased + returns),
+                "net_delta": float(net_delta),
+            }
+        )
 
     df = pd.DataFrame(rows)
 
     # Rolling 7-day average of units_sold — same logic as feature_service.py
-    df["rolling_avg_7d"] = (
-        df["units_sold"]
-        .rolling(7, min_periods=1)
-        .mean()
-        .round(2)
-    )
+    df["rolling_avg_7d"] = df["units_sold"].rolling(7, min_periods=1).mean().round(2)
 
     return df
 

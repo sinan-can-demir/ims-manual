@@ -2,9 +2,9 @@
 Author: Sinan Demir
 Last Updated: 2026-04-01
 
-This roadmap organizes the development of IMS (Inventory Management System) into **epochs**.
-Each epoch unlocks the next capability. The system evolves from a simple backend into a full
-data platform with streaming and ML.
+This roadmap organizes the development of IMS into **epochs**.
+Each epoch unlocks the next capability. The system evolves from a simple
+backend into a full data platform with ML and a dashboard.
 
 Core principles:
 - Events are the **source of truth**
@@ -27,12 +27,10 @@ Goal: Create a minimal, reproducible backend environment.
 [x] Inventory projection (inventory_state)
 [x] Alembic migrations setup
 
-Milestone Achieved:
+Milestone: Complete
 - Database schema versioned with Alembic
-- Initial migration created and applied
 - Tables: products, inventory_events, inventory_state, alembic_version
 - Docker startup runs migrations automatically before serving
-
 
 ------------------------------------------------------------
 EPOCH 1 — Event-Driven Backend
@@ -43,41 +41,27 @@ Goal: Build a robust, production-hardened event-driven inventory system.
 [x] Add event table indexes (product_id, created_at, composite)
 [x] Enforce product_id NOT NULL in inventory_events
 [x] Add idempotency key (event_id) to inventory events
-[x] Quantity normalization per event type (PURCHASE/RETURN = positive, SALE/DAMAGE = negated internally)
+[x] Quantity normalization per event type
 [x] Oversell protection (inventory cannot go below 0)
 [x] SELECT FOR UPDATE concurrency safety on inventory_state row
-[x] Inventory read from projection (inventory_state), not SUM(events)
-[x] Event writes and projection updates in single transaction (atomicity)
+[x] Inventory read from projection, not SUM(events)
+[x] Event writes and projection updates in single transaction
 [x] Duplicate SKU returns 409 Conflict
 [x] Pydantic v2 migration (ConfigDict, no deprecation warnings)
-[x] Structured logging (app/core/logging.py)
+[x] Structured JSON logging (app/core/logging.py)
 [x] Event replay service (rebuild_inventory_state from events)
 [x] Integration tests (pytest with SQLite StaticPool in-memory DB)
 [x] Test isolation (tables created/dropped per function fixture)
-[x] Shared test utility (tests/utils.py with create_product helper)
-[x] Makefile targets (up, down, reset, logs, test, test-e2e, test-all, migrate, shell)
-[x] E2E bash test script (test_scripts/test_sc.sh with Docker lifecycle)
+[x] Shared test utility (tests/utils.py)
+[x] Makefile targets (up, down, reset, logs, test, test-e2e, migrate, shell)
+[x] E2E bash test script (test_scripts/test_sc.sh)
 [x] Response models and correct status codes (201 for POST)
 [x] Deterministic event ordering (ORDER BY created_at ASC, id ASC)
+[x] Pagination on event listing endpoint (limit, offset)
+[x] Edge case tests (return/damage sequence, large adjustments)
 [x] README accurate and synced with actual endpoints
 
-Completed (tests are optional):
-[x] Pagination on event listing endpoint (limit, offset params)
-[x] Test: concurrent sales do not oversell (requires threads or async simulation)
-[x] Test: return → damage sequence
-[x] Test: large adjustment edge cases
-[x] Refactor: remove ORM object creation from product route (minor cleanup)
-[x] Structured logging: JSON format output (currently plain text)
-[x] Correlation / request IDs in logs
-In Progress / Remaining:
-[X] Pagination on event listing endpoint (limit, offset params)
-[X] Test: concurrent sales do not oversell (requires threads or async simulation)
-[X] Test: return → damage sequence
-[X] Test: large adjustment edge cases
-[X] Refactor: remove ORM object creation from product route (minor cleanup)
-[X] Structured logging: JSON format output (currently plain text)
-[X] Correlation / request IDs in logs
-
+Milestone: Complete
 
 ------------------------------------------------------------
 EPOCH 2 — Batch Data Platform
@@ -85,157 +69,203 @@ EPOCH 2 — Batch Data Platform
 
 Goal: Export the event log into a partitioned data lake.
 
-Infrastructure:
 [x] data_lake/ directory and inventory_events/ subfolder
 [x] .gitignore excludes parquet files and checkpoints.json
-[x] data_lake/README.md documents structure and design principles
-
-Export Service (app/services/export_service.py):
+[x] Export service (export_service.py)
 [x] Query events ordered by (created_at, id)
-[x] Convert to pandas DataFrame
 [x] Partition by year/month/day
 [x] Write partitioned .parquet files
 [x] Incremental export using checkpoints.json
 [x] Full and incremental export modes
-
-Export API:
 [x] POST /api/inventory/export endpoint
-[x] Returns ExportMetadata schema (rows, partitions, files, mode, checkpoint_updated)
+[x] Validation script (validate_exports.py)
+[x] CLI script (app/scripts/export_events.py)
+[x] pytest tests for export service
+[x] Handle timezone-naive datetimes from SQLite in tests
+[x] Makefile target: make export
 
-Validation Script (app/scripts/validate_exports.py):
-[x] Row count comparison (DB vs parquet)
-[x] Duplicate event_id detection
-[x] Schema column validation
-
-CLI Script:
-[x] python app/scripts/export_events.py (runs incremental export)
-
-Remaining:
-[X] pytest tests for export service (file creation, partition structure, incremental logic)
-[X] Logging: log export start, completion, rows exported, partition counts
-[X] Handle timezone-naive datetimes from SQLite during testing (test environment gap)
-[X] Make export idempotent (re-running same export does not duplicate rows in parquet)
-[X] Makefile target: make export
-
-Milestone Definition (Epoch 2 COMPLETE when):
-[x] Events exported to partitioned Parquet
-[x] Incremental export working and tested
-[x] Pipeline reproducible from scratch
-[x] Data validated (row counts match, no duplicates, schema consistent)
-
+Milestone: Complete
 
 ------------------------------------------------------------
 EPOCH 3 — Data Warehouse
 ------------------------------------------------------------
 
-Goal: Build an analytics layer on top of the data lake.
+Goal: Build an analytical layer on top of the data lake using DuckDB.
 
-[x] Choose warehouse approach (DuckDB local vs hosted Postgres schema vs dbt)
-[x] Create warehouse schema
-[x] Build fact_inventory_events (cleaned, typed, partitioned view)
-[x] Build dim_products (product dimension table)
-[x] Build dim_dates (date dimension table)
-[x] Create analytical metrics (daily stock levels, event counts, turnover rate)
-[x] Add dbt project (if chosen): models, tests, documentation
+[x] DuckDB installed and reading Parquet files
+[x] Star schema design (fact + dimensions)
+[x] dim_products built from PostgreSQL
+[x] dim_dates pre-generated for full date range
+[x] fact_inventory_events joined from data lake
+[x] Three analytical queries documented (warehouse/queries.sql)
+[x] CLI script (app/scripts/build_warehouse.py)
+[x] Makefile target: make warehouse
+[x] Warehouse tests (test_warehouse.py)
+[x] warehouse/README.md documents schema and rebuild steps
 
-Warehouse Target Schema:
-
-    fact_inventory_events
-    dim_products
-    dim_dates
-
+Milestone: Complete
 
 ------------------------------------------------------------
-EPOCH 4 — Streaming Platform
+EPOCH 4 — dbt Transformations
 ------------------------------------------------------------
 
-Goal: Process inventory events in real time.
+Goal: Replace hand-written Python warehouse service with dbt models.
 
-[ ] Introduce Kafka (local via Docker Compose)
-[ ] Create event producer (FastAPI publishes events to Kafka after writing to DB)
-[ ] Create event consumers (projection updater, data lake writer)
-[ ] Implement replay via Kafka compacted topic or event log
-[ ] Deduplication logic on consumer side
+[x] dbt-duckdb installed and configured
+[x] dbt project initialized (warehouse/ims_warehouse/)
+[x] profiles.yml configured for DuckDB
+[x] Sources declared (sources.yml)
+[x] Staging model (stg_inventory_events.sql)
+[x] Dimension models (dim_products.sql, dim_dates.sql)
+[x] Fact model (fact_inventory_events.sql)
+[x] Schema tests (unique, not_null, relationships)
+[x] dbt docs generated
+[x] Makefile targets: make dbt-run, make dbt-test, make dbt-docs
+[x] warehouse_service.py deprecated with clear comment
 
-Architecture:
-
-    FastAPI → Kafka → Consumers → Projections / Data Lake
-
+Milestone: Complete
 
 ------------------------------------------------------------
 EPOCH 5 — ML Platform
 ------------------------------------------------------------
 
-Goal: Enable forecasting and anomaly detection.
+Goal: Enable demand forecasting and restock recommendations.
 
-[ ] Create feature tables (daily_sales, rolling_avg_7d, stockout_frequency)
-[ ] Build demand forecasting model (ARIMA or Prophet baseline)
-[ ] Detect inventory anomalies (sudden drops, abnormal events)
-[ ] Build restock recommendation system
-[ ] Automate training pipeline (Airflow or simple cron)
+[x] Feature engineering service (feature_service.py)
+[x] daily_sales feature table (product_id, date, units_sold, rolling_avg_7d)
+[x] Prophet model training per product (forecast_service.py)
+[x] Model persistence (models/prophet_{product_id}.pkl)
+[x] Forecast API endpoint (GET /api/forecast/{product_id})
+[x] Restock recommendation service (restock_service.py)
+[x] Restock API endpoint (GET /api/restock/{product_id})
+[x] Urgency classification (OK / LOW / URGENT / STOCKOUT)
+[x] Pydantic schemas for forecast and restock responses
+[x] CLI scripts: make features, make train
+[x] Seed data script (scripts/seed_data.py)
+[x] Synthetic feature generator (scripts/generate_synthetic_features.py)
+[x] Forecast and restock tests (test_forecast.py)
 
-
-------------------------------------------------------------
-EPOCH 6 — Application Layer
-------------------------------------------------------------
-
-Goal: Create operational dashboards and tools.
-
-[ ] Admin dashboard (FastAPI + lightweight frontend or Streamlit)
-[ ] Inventory monitoring (current stock, low stock alerts)
-[ ] Alerting system (email or webhook on threshold breach)
-[ ] Reporting UI (event history, stock trends)
-
+Milestone: Complete
 
 ------------------------------------------------------------
-EPOCH 7 — Advanced Automation (Optional)
+EPOCH 6 — Application Layer (Dashboard)
 ------------------------------------------------------------
 
-Goal: Intelligent inventory automation.
+Goal: Build an interactive inventory dashboard with Streamlit.
 
-[ ] Auto-order recommendations
-[ ] Supplier lead-time prediction
-[ ] Warehouse sensor integration
-[ ] Smart alerts
+[x] Streamlit installed and configured
+[x] dashboard/app.py with full layout
+[x] Product selector (sidebar dropdown)
+[x] Inventory metrics (current stock, projected demand, recommended order)
+[x] Restock alert with urgency color coding
+[x] 7-day demand forecast chart with confidence band (Plotly)
+[x] Recent inventory events table
+[x] Cached data loaders (@st.cache_data with TTL)
+[x] Loading spinners and empty state handling
+[x] Makefile target: make dashboard
 
+Milestone: Complete
 
 ------------------------------------------------------------
-Daily Development Workflow
+EPOCH 7 — Production Hardening & AWS Deployment (Next)
 ------------------------------------------------------------
 
-Schema changes:
+Goal: Make the system production-grade and deploy it to AWS.  
 
-1. Modify SQLAlchemy models
-2. Generate migration:
-   alembic revision --autogenerate -m "description"
-   (run inside Docker: docker compose exec api alembic ...)
-3. Inspect migration file in migrations/versions/
-4. Apply migration:
-   alembic upgrade head
+Phase 1 — Quick wins (no architecture changes)  
+[x] Pin all dependency versions in requirements.txt  
+[x] Add /health endpoint to FastAPI app (required by AWS ALB/ECS)  
+[x] Add CORS middleware to FastAPI app (origins via CORS_ORIGINS env var)  
+[x] Add .env.example documenting all required environment variables  
+[x] Fix docker-compose: add Postgres healthcheck, remove fragile sleep 3  
+[x] Tune SQLAlchemy connection pool for cloud (pool_pre_ping, pool_size, max_overflow)  
 
-Running tests:
+Phase 2 — Security hardening  
+[ ] Remove hardcoded credentials from docker-compose.yml and database.py defaults  
+[ ] Add API authentication (API key header or JWT via FastAPI middleware)  
+[ ] Add non-root USER to Dockerfile  
+[ ] Stop leaking internal error details (replace str(e) in forecast.py 500 responses)  
 
-    make test          # pytest (fast, SQLite in-memory)
-    make test-e2e      # bash E2E against Docker stack
-    make test-all      # both
+Phase 3 — App hardening  
+[ ] Raise domain exceptions in service layer instead of HTTPException
+      (InsufficientInventoryError, ProductNotFoundError → converted at API layer)  
+[ ] Run Uvicorn with multiple workers in production (Gunicorn + UvicornWorker)  
+[ ] Improve Dockerfile: multi-stage build, proper .dockerignore, non-root user  
 
-Exporting data:
+Phase 4 — Testing  
+[ ] Run integration tests against a real Postgres instead of SQLite
+      (SELECT FOR UPDATE is silently ignored in SQLite — concurrency tests are not valid)  
+[ ] Add CI/CD via GitHub Actions (make repo public first for free CI)  
+      - Run pytest on every push/PR  
+      - Build and lint Docker image  
 
-    python app/scripts/export_events.py
+Phase 5 — AWS deployment  
+[ ] Move data lake from local filesystem to S3  
+      (update export_service.py to write Parquet files to an S3 bucket)  
+[ ] Configure AWS infrastructure (ECS Fargate or EC2, RDS PostgreSQL, S3, ALB)  
+[ ] Store secrets in AWS Secrets Manager, inject as environment variables  
+[ ] Wire CloudWatch Logs (stdout logging already works — just needs log group config)   
+[ ] Deploy dashboard (Streamlit on ECS or EC2, update to read feature store from S3)  
+[ ] Set up domain + HTTPS via ACM + ALB  
 
+Milestone: App running on AWS with real auth, secrets management, and CI/CD  
+
+------------------------------------------------------------
+EPOCH 8 — Kafka Streaming (Optional)
+------------------------------------------------------------
+
+Goal: Process inventory events in real time via Kafka.
+
+[ ] Kafka + Zookeeper via Docker Compose  
+[ ] Event producer (FastAPI publishes to Kafka after DB write)  
+[ ] Projection updater consumer  
+[ ] Data lake writer consumer  
+[ ] Deduplication on consumer side  
+[ ] Replay via compacted topic  
+
+------------------------------------------------------------
+EPOCH 9 — Advanced ML (Optional)
+------------------------------------------------------------
+
+Goal: Productionize the ML layer.  
+
+[ ] Automated retraining pipeline  
+[ ] Model versioning  
+[ ] Feature importance analysis  
+[ ] A/B testing framework for models  
+
+------------------------------------------------------------
+Full Pipeline (Current)
+------------------------------------------------------------
+
+make up          → start Docker stack  
+make migrate     → apply Alembic migrations  
+make test        → run pytest suite  
+make test-e2e    → run bash E2E tests  
+make export      → export events to data lake  
+make dbt-run     → build warehouse models  
+make features    → build feature store  
+make train       → train Prophet models  
+make dashboard   → start Streamlit dashboard at localhost:8501  
 
 ------------------------------------------------------------
 Long-Term Vision
 ------------------------------------------------------------
 
-IMS evolves from:
-
-    Simple CRUD API
-            ↓
-    Event-Driven System  ← current
-            ↓
-    Batch Data Platform  ← in progress
-            ↓
-    Streaming System
-            ↓
-    ML-Driven Inventory Intelligence
+Simple CRUD API
+        ↓
+Event-Driven System       ✅ Complete
+        ↓
+Batch Data Platform       ✅ Complete
+        ↓
+Data Warehouse (dbt)      ✅ Complete
+        ↓
+ML Platform               ✅ Complete
+        ↓
+Application Layer         ✅ Complete
+        ↓
+Production Hardening      ← Next
+        ↓
+Kafka Streaming           ← Optional
+        ↓
+ML-Driven Intelligence    ← Future

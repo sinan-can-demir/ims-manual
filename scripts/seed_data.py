@@ -10,10 +10,10 @@
 #   - Docker stack must be running (make up)
 #   - API must be healthy at http://localhost:8000
 
-import requests
-import uuid
-from datetime import date, timedelta
 import random
+from datetime import date, timedelta
+
+import requests
 
 BASE = "http://localhost:8000"
 
@@ -32,9 +32,9 @@ PRODUCTS = [
 # std_dev adds realistic noise so the model has something to learn
 # -------------------------------------------------------------------
 DEMAND_PROFILES = {
-    "WGT-001": {"mean": 15, "std": 4},   # steady seller
-    "WGT-002": {"mean": 5,  "std": 2},   # slow mover
-    "WGT-003": {"mean": 30, "std": 8},   # high volume
+    "WGT-001": {"mean": 15, "std": 4},  # steady seller
+    "WGT-002": {"mean": 5, "std": 2},  # slow mover
+    "WGT-003": {"mean": 30, "std": 8},  # high volume
 }
 
 START_DATE = date(2026, 3, 1)
@@ -61,8 +61,10 @@ def create_products() -> dict[str, int]:
             # Already exists — this is fine, seed is idempotent
             # We need to look up the id a different way
             # For simplicity, warn and skip — re-run after make reset if needed
-            print(f"  ⚠ {product['name']} already exists (SKU conflict). "
-                  f"Run make reset first for a clean seed.")
+            print(
+                f"  ⚠ {product['name']} already exists (SKU conflict). "
+                f"Run make reset first for a clean seed."
+            )
 
         else:
             print(f"  ✗ Failed to create {product['name']}: {response.text}")
@@ -87,12 +89,15 @@ def seed_events(product_ids: dict[str, int]) -> None:
 
         # --- Initial bulk purchase on day 1 ---
         initial_stock = mean * 20  # ~20 days of stock to start
-        post("/api/inventory/events", {
-            "product_id": product_id,
-            "event_type": "PURCHASE",
-            "quantity": initial_stock,
-            "event_id": f"seed-purchase-initial-{sku}"
-        })
+        post(
+            "/api/inventory/events",
+            {
+                "product_id": product_id,
+                "event_type": "PURCHASE",
+                "quantity": initial_stock,
+                "event_id": f"seed-purchase-initial-{sku}",
+            },
+        )
         print(f"    Day 0: PURCHASE {initial_stock} units (initial stock)")
 
         for day_offset in range(DAYS):
@@ -103,12 +108,15 @@ def seed_events(product_ids: dict[str, int]) -> None:
             # clip at 1 to avoid zero or negative quantities
             daily_demand = max(1, int(random.gauss(mean, std)))
 
-            sale_response = post("/api/inventory/events", {
-                "product_id": product_id,
-                "event_type": "SALE",
-                "quantity": daily_demand,
-                "event_id": f"seed-sale-{sku}-{day_label}"
-            })
+            sale_response = post(
+                "/api/inventory/events",
+                {
+                    "product_id": product_id,
+                    "event_type": "SALE",
+                    "quantity": daily_demand,
+                    "event_id": f"seed-sale-{sku}-{day_label}",
+                },
+            )
 
             if sale_response.status_code == 201:
                 print(f"    {day_label}: SALE {daily_demand} units")
@@ -116,34 +124,43 @@ def seed_events(product_ids: dict[str, int]) -> None:
                 # Oversell protection triggered — stock ran out
                 # Restock before continuing
                 restock_qty = mean * 10
-                post("/api/inventory/events", {
-                    "product_id": product_id,
-                    "event_type": "PURCHASE",
-                    "quantity": restock_qty,
-                    "event_id": f"seed-restock-{sku}-{day_label}"
-                })
-                print(f"    {day_label}: ⚠ Oversell blocked → PURCHASE {restock_qty} (emergency restock)")
+                post(
+                    "/api/inventory/events",
+                    {
+                        "product_id": product_id,
+                        "event_type": "PURCHASE",
+                        "quantity": restock_qty,
+                        "event_id": f"seed-restock-{sku}-{day_label}",
+                    },
+                )
+                print(f"    {day_label}: ⚠ Oversell blocked → PURCHASE {restock_qty} (emergency)")
 
             # --- Occasional return (roughly 1 in 7 days) ---
             if random.random() < 0.14:
                 return_qty = random.randint(1, 3)
-                post("/api/inventory/events", {
-                    "product_id": product_id,
-                    "event_type": "RETURN",
-                    "quantity": return_qty,
-                    "event_id": f"seed-return-{sku}-{day_label}"
-                })
+                post(
+                    "/api/inventory/events",
+                    {
+                        "product_id": product_id,
+                        "event_type": "RETURN",
+                        "quantity": return_qty,
+                        "event_id": f"seed-return-{sku}-{day_label}",
+                    },
+                )
                 print(f"    {day_label}: RETURN {return_qty} units")
 
             # --- Mid-period restock (around day 15) ---
             if day_offset == 14:
                 restock_qty = mean * 15
-                post("/api/inventory/events", {
-                    "product_id": product_id,
-                    "event_type": "PURCHASE",
-                    "quantity": restock_qty,
-                    "event_id": f"seed-restock-mid-{sku}"
-                })
+                post(
+                    "/api/inventory/events",
+                    {
+                        "product_id": product_id,
+                        "event_type": "PURCHASE",
+                        "quantity": restock_qty,
+                        "event_id": f"seed-restock-mid-{sku}",
+                    },
+                )
                 print(f"    {day_label}: PURCHASE {restock_qty} units (mid-period restock)")
 
 
@@ -174,7 +191,7 @@ def main() -> None:
 
     # 4. Summary
     print("\n" + "=" * 55)
-    print(f"✓ Seeding complete.")
+    print("✓ Seeding complete.")
     print(f"  Products seeded : {len(product_ids)}")
     print(f"  Days of history : {DAYS}")
     print()

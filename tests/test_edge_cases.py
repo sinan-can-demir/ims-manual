@@ -1,17 +1,21 @@
 # tests/test_edge_cases.py
 
 import uuid
+
 from .utils import create_product
 
 
 def _event(client, product_id, event_type, quantity, event_id=None):
     event_id = event_id or f"evt-{uuid.uuid4()}"
-    response = client.post("/api/inventory/events", json={
-        "product_id": product_id,
-        "event_type": event_type,
-        "quantity": quantity,
-        "event_id": event_id,
-    })
+    response = client.post(
+        "/api/inventory/events",
+        json={
+            "product_id": product_id,
+            "event_type": event_type,
+            "quantity": quantity,
+            "event_id": event_id,
+        },
+    )
     return response
 
 
@@ -22,6 +26,7 @@ def _quantity(client, product_id):
 # ---------------------------------------------------------------------------
 # Return → Damage sequence
 # ---------------------------------------------------------------------------
+
 
 def test_return_then_damage_sequence(client):
     """
@@ -71,6 +76,7 @@ def test_damage_requires_positive_quantity(client):
 # Large adjustment edge cases
 # ---------------------------------------------------------------------------
 
+
 def test_adjustment_large_positive(client):
     """
     Large positive ADJUSTMENT must succeed.
@@ -113,7 +119,7 @@ def test_adjustment_zero_rejected(client):
     pid = product["id"]
 
     response = _event(client, pid, "ADJUSTMENT", 0)
-    assert response.status_code == 400
+    assert response.status_code == 422  # Pydantic rejects zero at schema level
 
 
 def test_adjustment_back_to_positive(client):

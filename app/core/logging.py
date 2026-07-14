@@ -23,4 +23,5 @@ def setup_logger():
     # return the configured
     return logger
 
+
 logger = setup_logger()

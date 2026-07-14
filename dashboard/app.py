@@ -19,19 +19,16 @@ from app.services.restock_service import get_restock_recommendation
 # ---------------------------------------------------------------
 # Page config — must be the first Streamlit call in the script
 # ---------------------------------------------------------------
-st.set_page_config(
-    page_title="IMS Dashboard",
-    page_icon="🏭",
-    layout="wide"
-)
+st.set_page_config(page_title="IMS Dashboard", page_icon="🏭", layout="wide")
 
 # ---------------------------------------------------------------
-# Cached data loaders
-# TTL=300 means data refreshes every 5 minutes automatically
+# Data loaders
+# Sessions stay outside the cache layer.
+# Cache only plain Python values — never ORM objects.
 # ---------------------------------------------------------------
 
-@st.cache_data(ttl=300)
-def load_inventory(product_id: int) -> int:
+
+def _get_inventory(product_id: int) -> int:
     db = SessionLocal()
     try:
         return get_inventory(db, product_id)
@@ -39,8 +36,7 @@ def load_inventory(product_id: int) -> int:
         db.close()
 
 
-@st.cache_data(ttl=300)
-def load_restock(product_id: int) -> dict:
+def _get_restock(product_id: int) -> dict:
     db = SessionLocal()
     try:
         return get_restock_recommendation(db, product_id)
@@ -48,13 +44,7 @@ def load_restock(product_id: int) -> dict:
         db.close()
 
 
-@st.cache_data(ttl=300)
-def load_forecast(product_id: int) -> pd.DataFrame:
-    return forecast(product_id, days=7)
-
-
-@st.cache_data(ttl=300)
-def load_events(product_id: int) -> list[dict]:
+def _get_events(product_id: int) -> list[dict]:
     db = SessionLocal()
     try:
         events = (
@@ -64,14 +54,40 @@ def load_events(product_id: int) -> list[dict]:
             .limit(20)
             .all()
         )
-        return [{
-            "Date":       e.created_at.strftime("%Y-%m-%d %H:%M"),
-            "Event Type": e.event_type.value,
-            "Quantity":   e.quantity,
-            "Event ID":   e.event_id,
-        } for e in events]
+        # Serialize to plain dicts here, inside the session,
+        # before the session closes. Never let ORM objects
+        # escape the session boundary.
+        return [
+            {
+                "Date": e.created_at.strftime("%Y-%m-%d %H:%M"),
+                "Event Type": e.event_type.value,
+                "Quantity": e.quantity,
+                "Event ID": e.event_id,
+            }
+            for e in events
+        ]
     finally:
         db.close()
+
+
+@st.cache_data(ttl=300)
+def load_inventory(product_id: int) -> int:
+    return _get_inventory(product_id)
+
+
+@st.cache_data(ttl=300)
+def load_restock(product_id: int) -> dict:
+    return _get_restock(product_id)
+
+
+@st.cache_data(ttl=300)
+def load_forecast(product_id: int) -> pd.DataFrame:
+    return forecast(product_id, days=7)
+
+
+@st.cache_data(ttl=300)
+def load_events(product_id: int) -> list[dict]:
+    return _get_events(product_id)
 
 
 # ---------------------------------------------------------------
@@ -80,13 +96,12 @@ def load_events(product_id: int) -> list[dict]:
 st.title("🏭 Inventory Management Dashboard")
 st.sidebar.header("Controls")
 
-feature_df = pd.read_parquet("feature_store/daily_sales.parquet")
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+feature_df = pd.read_parquet(_PROJECT_ROOT / "feature_store" / "daily_sales.parquet")
 product_ids = sorted(feature_df["product_id"].unique().tolist())
 
 selected_product = st.sidebar.selectbox(
-    "Select Product",
-    options=product_ids,
-    format_func=lambda pid: f"Product {pid}"
+    "Select Product", options=product_ids, format_func=lambda pid: f"Product {pid}"
 )
 
 if st.sidebar.button("🔄 Refresh"):
@@ -97,7 +112,7 @@ if st.sidebar.button("🔄 Refresh"):
 # Section 1 — Inventory metrics
 # ---------------------------------------------------------------
 current_qty = load_inventory(selected_product)
-restock     = load_restock(selected_product)
+restock = load_restock(selected_product)
 
 col1, col2, col3 = st.columns(3)
 
@@ -115,9 +130,9 @@ with col3:
 # ---------------------------------------------------------------
 urgency_config = {
     "STOCKOUT": ("🔴", "error"),
-    "URGENT":   ("🟠", "warning"),
-    "LOW":      ("🟡", "warning"),
-    "OK":       ("🟢", "success"),
+    "URGENT": ("🟠", "warning"),
+    "LOW": ("🟡", "warning"),
+    "OK": ("🟢", "success"),
 }
 
 icon, alert_type = urgency_config[restock["urgency"]]
@@ -149,31 +164,35 @@ try:
     fig = go.Figure()
 
     # Shaded confidence band
-    fig.add_trace(go.Scatter(
-        x=pd.concat([forecast_df["ds"], forecast_df["ds"][::-1]]),
-        y=pd.concat([forecast_df["yhat_upper"], forecast_df["yhat_lower"][::-1]]),
-        fill="toself",
-        fillcolor="rgba(99, 102, 241, 0.15)",
-        line=dict(color="rgba(255,255,255,0)"),
-        name="Confidence interval",
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=pd.concat([forecast_df["ds"], forecast_df["ds"][::-1]]),
+            y=pd.concat([forecast_df["yhat_upper"], forecast_df["yhat_lower"][::-1]]),
+            fill="toself",
+            fillcolor="rgba(99, 102, 241, 0.15)",
+            line=dict(color="rgba(255,255,255,0)"),
+            name="Confidence interval",
+        )
+    )
 
     # Predicted demand line
-    fig.add_trace(go.Scatter(
-        x=forecast_df["ds"],
-        y=forecast_df["yhat"].clip(lower=0),
-        mode="lines+markers",
-        line=dict(color="#6366f1", width=2),
-        marker=dict(size=6),
-        name="Predicted demand",
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=forecast_df["ds"],
+            y=forecast_df["yhat"].clip(lower=0),
+            mode="lines+markers",
+            line=dict(color="#6366f1", width=2),
+            marker=dict(size=6),
+            name="Predicted demand",
+        )
+    )
 
     fig.update_layout(
         xaxis_title="Date",
         yaxis_title="Units",
         hovermode="x unified",
         height=350,
-        margin=dict(l=0, r=0, t=20, b=0)
+        margin=dict(l=0, r=0, t=20, b=0),
     )
 
     st.plotly_chart(fig, use_container_width=True)
@@ -190,10 +209,6 @@ st.subheader("Recent Inventory Events")
 events = load_events(selected_product)
 
 if events:
-    st.dataframe(
-        pd.DataFrame(events),
-        use_container_width=True,
-        hide_index=True
-    )
+    st.dataframe(pd.DataFrame(events), use_container_width=True, hide_index=True)
 else:
     st.info("No events recorded for this product yet.")

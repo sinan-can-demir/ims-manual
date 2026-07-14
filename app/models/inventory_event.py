@@ -1,8 +1,8 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, Index
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Index, Integer, String
 from sqlalchemy.sql import func
 
-from app.models.enums import EventType
 from app.database import Base
+from app.models.enums import EventType
 
 
 class InventoryEvent(Base):
@@ -18,17 +18,10 @@ class InventoryEvent(Base):
 
     event_id = Column(String, unique=True, nullable=False)
 
-    product_id = Column(
-        Integer,
-        ForeignKey("products.id"),
-        nullable=False
-    )
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
 
-    event_type = Column(
-        Enum(EventType, name="event_type_enum"),
-        nullable=False
-    )
+    event_type = Column(Enum(EventType, name="event_type_enum"), nullable=False)
 
-    quantity = Column(Integer)
+    quantity = Column(Integer, nullable=False)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
