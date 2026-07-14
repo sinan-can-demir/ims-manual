@@ -113,7 +113,7 @@ def test_adjustment_zero_rejected(client):
     pid = product["id"]
 
     response = _event(client, pid, "ADJUSTMENT", 0)
-    assert response.status_code == 400
+    assert response.status_code == 422  # Pydantic rejects zero at schema level
 
 
 def test_adjustment_back_to_positive(client):
