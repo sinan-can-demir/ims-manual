@@ -75,3 +75,11 @@ models/*.pkl
 # coverage data
 .coverage
 .coverage.*
+
+# Terraform (note: .terraform.lock.hcl is intentionally NOT ignored — commit it)
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/terraform.tfvars
+infra/*.tfplan
+infra/crash.log

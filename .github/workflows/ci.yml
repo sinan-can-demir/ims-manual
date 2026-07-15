@@ -66,3 +66,52 @@ jobs:
       - uses: actions/checkout@v4
 
       - run: docker build -f docker/Dockerfile .
+
+  # Deploys to AWS on every push to main, once lint/test/docker-build are all
+  # green. Uses GitHub OIDC to assume an AWS IAM role — no long-lived AWS
+  # keys are stored in this repo. The role, ECS cluster/service, and ECR
+  # repo are provisioned separately via Terraform (see infra/README.md);
+  # this job only builds+pushes an image and points the ECS service at it.
+  deploy:
+    needs: [lint, test, docker-build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr-login
+
+      - name: Build and push image
+        env:
+          IMAGE: ${{ steps.ecr-login.outputs.registry }}/ims-api:sha-${{ github.sha }}
+        run: |
+          docker build -f docker/Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Fetch current task definition
+        run: |
+          aws ecs describe-task-definition --task-definition ims-api \
+            --query taskDefinition > task-def.json
+
+      - uses: aws-actions/amazon-ecs-render-task-definition@v1
+        id: render
+        with:
+          task-definition: task-def.json
+          container-name: api
+          image: ${{ steps.ecr-login.outputs.registry }}/ims-api:sha-${{ github.sha }}
+
+      - uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          service: ims-api-service
+          cluster: ims-cluster
+          wait-for-service-stability: true
