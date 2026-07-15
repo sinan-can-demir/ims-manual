@@ -82,6 +82,12 @@ variable "ecs_desired_count" {
   default     = 1
 }
 
+variable "gunicorn_workers" {
+  description = "Number of Gunicorn worker processes per task, each a full Python process with the app's dependencies loaded (pandas/prophet/duckdb are not small). Kept conservative by default because the default ecs_task_cpu/ecs_task_memory (256/512) is the cheapest Fargate tier — raise this only alongside ecs_task_cpu/ecs_task_memory, not independently, or workers will OOM."
+  type        = number
+  default     = 2
+}
+
 variable "api_key" {
   description = "Shared API key for the /api routes (same value clients send via the X-API-Key header). Generate with `openssl rand -hex 32`. Supply via terraform.tfvars (gitignored) or TF_VAR_api_key — never commit a real value."
   type        = string

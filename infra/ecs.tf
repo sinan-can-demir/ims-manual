@@ -44,12 +44,14 @@ resource "aws_ecs_task_definition" "api" {
         }
       ]
 
-      # Mirrors docker-compose.yml's inline "migrate then serve" pattern.
-      # Safe at desired_count = 1; needs to become a dedicated one-off
-      # migration task before desired_count is ever raised above 1.
+      # Mirrors docker-compose.yml's inline "migrate then serve" pattern —
+      # migrations run once per task start regardless of gunicorn_workers
+      # below, since alembic runs before gunicorn's master process even
+      # forks. Safe at desired_count = 1; needs to become a dedicated
+      # one-off migration task before desired_count is ever raised above 1.
       command = [
         "sh", "-c",
-        "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${var.container_port}"
+        "alembic upgrade head && gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${var.container_port} --workers ${var.gunicorn_workers}"
       ]
 
       environment = [

@@ -1,3 +1,15 @@
+# ---- builder: install deps into an isolated venv, nothing else survives ----
+FROM python:3.11-slim AS builder
+
+WORKDIR /app
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ---- final: runtime image only, no pip cache / apt lists / build layer ----
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -6,8 +18,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 COPY . .
 
@@ -22,4 +34,9 @@ USER appuser
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
   CMD curl -f http://localhost:8000/health || exit 1
 
+# Plain single-worker Uvicorn by default — matches what docker-compose.yml's
+# dev command and docker-compose.prod.yml/infra/ecs.tf's production commands
+# all explicitly override anyway. Production paths run Gunicorn with
+# UvicornWorker instead (see docker-compose.prod.yml, infra/ecs.tf); this is
+# just a sane default for anyone running the image directly.
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
