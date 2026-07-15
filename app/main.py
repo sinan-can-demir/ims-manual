@@ -3,13 +3,15 @@
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.forecast import router as forecast_router
 from app.api.inventory import router as inventory_router
 from app.api.products import router as products_router
 from app.core.auth import require_api_key
+from app.core.exceptions import DomainError
 from app.core.logging import logger
 
 
@@ -36,6 +38,11 @@ _auth = [Depends(require_api_key)]
 app.include_router(products_router, prefix="/api", dependencies=_auth)
 app.include_router(inventory_router, prefix="/api", dependencies=_auth)
 app.include_router(forecast_router, prefix="/api", dependencies=_auth)
+
+
+@app.exception_handler(DomainError)
+async def domain_error_handler(request: Request, exc: DomainError):
+    return JSONResponse(status_code=exc.status_code, content={"detail": str(exc)})
 
 
 @app.get("/health")

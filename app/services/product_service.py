@@ -1,7 +1,7 @@
-from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import DuplicateSKUError
 from app.core.logging import logger
 from app.models.product import Product
 from app.schemas.product import ProductCreate
@@ -21,4 +21,4 @@ def create_product(db: Session, product: ProductCreate) -> Product:
 
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=409, detail="Product with this SKU already exists")
+        raise DuplicateSKUError(product.sku)
