@@ -1,21 +1,38 @@
 # scripts/seed_data.py
 #
 # Generates realistic inventory events spread across 30 days for 3 products.
-# Calls the live API so all validation, projection, and idempotency logic applies.
+#
+# Writes directly to the database instead of going through the HTTP API.
+# InventoryEvent.created_at is server-stamped (app/models/inventory_event.py)
+# by design — events are the source of truth and clients can't backdate them
+# — but that means there's no way to get 30 distinct calendar days of history
+# out of the API in one sitting; every event would land on today's date.
+# Setting created_at directly here is the one place that's the point, not a
+# workaround: this script is generating demo history, not simulating a
+# client. Reuses normalize_quantity (app/services/inventory_service.py) for
+# quantity sign handling and rebuild_inventory_state
+# (app/services/replay_service.py) to derive the final projection, so the
+# resulting DB state is exactly what real event replay would produce.
 #
 # Usage:
 #   python scripts/seed_data.py
 #
 # Requirements:
-#   - Docker stack must be running (make up)
-#   - API must be healthy at http://localhost:8000
+#   - Postgres must be reachable at DATABASE_URL (make up)
 
 import random
-from datetime import date, timedelta
+import sys
+from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 
-import requests
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-BASE = "http://localhost:8000"
+from app.database import SessionLocal  # noqa: E402
+from app.models.enums import EventType  # noqa: E402
+from app.models.inventory_event import InventoryEvent  # noqa: E402
+from app.models.product import Product  # noqa: E402
+from app.services.inventory_service import normalize_quantity  # noqa: E402
+from app.services.replay_service import rebuild_inventory_state  # noqa: E402
 
 # -------------------------------------------------------------------
 # Products to seed
@@ -41,38 +58,65 @@ START_DATE = date(2026, 3, 1)
 DAYS = 30
 
 
-def post(endpoint: str, payload: dict) -> requests.Response:
-    return requests.post(f"{BASE}{endpoint}", json=payload)
+def _event_time(day: date) -> datetime:
+    # Midday UTC keeps every event unambiguously on its intended calendar
+    # day, regardless of the reader's timezone.
+    return datetime(day.year, day.month, day.day, 12, 0, 0, tzinfo=timezone.utc)
 
 
-def create_products() -> dict[str, int]:
+def create_products(db) -> dict[str, int]:
     """Create products and return a mapping of SKU -> product_id."""
     product_ids = {}
 
     for product in PRODUCTS:
-        response = post("/api/products", product)
+        existing = db.query(Product).filter(Product.sku == product["sku"]).first()
 
-        if response.status_code == 201:
-            pid = response.json()["id"]
-            product_ids[product["sku"]] = pid
-            print(f"  ✓ Created {product['name']} (id={pid})")
-
-        elif response.status_code == 409:
-            # Already exists — this is fine, seed is idempotent
-            # We need to look up the id a different way
-            # For simplicity, warn and skip — re-run after make reset if needed
+        if existing:
+            # Already exists — this is fine, seed is idempotent.
             print(
                 f"  ⚠ {product['name']} already exists (SKU conflict). "
                 f"Run make reset first for a clean seed."
             )
+            product_ids[product["sku"]] = existing.id
+            continue
 
-        else:
-            print(f"  ✗ Failed to create {product['name']}: {response.text}")
+        row = Product(name=product["name"], sku=product["sku"])
+        db.add(row)
+        db.flush()
+        product_ids[product["sku"]] = row.id
+        print(f"  ✓ Created {product['name']} (id={row.id})")
 
+    db.commit()
     return product_ids
 
 
-def seed_events(product_ids: dict[str, int]) -> None:
+def _record(
+    db,
+    product_id: int,
+    event_type: EventType,
+    quantity: int,
+    event_id: str,
+    when: datetime,
+) -> bool:
+    """Insert one backdated event. Returns False (no-op) if event_id already exists."""
+    existing = db.query(InventoryEvent).filter(InventoryEvent.event_id == event_id).first()
+    if existing:
+        return False
+
+    delta = normalize_quantity(event_type, quantity)
+    db.add(
+        InventoryEvent(
+            product_id=product_id,
+            event_type=event_type,
+            quantity=delta,
+            event_id=event_id,
+            created_at=when,
+        )
+    )
+    return True
+
+
+def seed_events(db, product_ids: dict[str, int]) -> None:
     """
     For each product, generate 30 days of realistic events:
     - Initial PURCHASE on day 1 (bulk restock)
@@ -84,84 +128,73 @@ def seed_events(product_ids: dict[str, int]) -> None:
         profile = DEMAND_PROFILES[sku]
         mean = profile["mean"]
         std = profile["std"]
+        stock = 0  # running total, mirrors the app's oversell protection
 
         print(f"\n  Seeding {sku} (product_id={product_id})...")
 
         # --- Initial bulk purchase on day 1 ---
         initial_stock = mean * 20  # ~20 days of stock to start
-        post(
-            "/api/inventory/events",
-            {
-                "product_id": product_id,
-                "event_type": "PURCHASE",
-                "quantity": initial_stock,
-                "event_id": f"seed-purchase-initial-{sku}",
-            },
-        )
+        if _record(
+            db,
+            product_id,
+            EventType.PURCHASE,
+            initial_stock,
+            f"seed-purchase-initial-{sku}",
+            _event_time(START_DATE),
+        ):
+            stock += initial_stock
         print(f"    Day 0: PURCHASE {initial_stock} units (initial stock)")
 
         for day_offset in range(DAYS):
             current_date = START_DATE + timedelta(days=day_offset)
+            when = _event_time(current_date)
             day_label = current_date.isoformat()
 
             # --- Daily sale ---
             # clip at 1 to avoid zero or negative quantities
             daily_demand = max(1, int(random.gauss(mean, std)))
 
-            sale_response = post(
-                "/api/inventory/events",
-                {
-                    "product_id": product_id,
-                    "event_type": "SALE",
-                    "quantity": daily_demand,
-                    "event_id": f"seed-sale-{sku}-{day_label}",
-                },
-            )
-
-            if sale_response.status_code == 201:
-                print(f"    {day_label}: SALE {daily_demand} units")
-            elif sale_response.status_code == 400:
-                # Oversell protection triggered — stock ran out
-                # Restock before continuing
+            if stock - daily_demand < 0:
+                # Oversell protection would trigger — restock before continuing,
+                # same as the app returning 400 and the original seed script
+                # reacting to it.
                 restock_qty = mean * 10
-                post(
-                    "/api/inventory/events",
-                    {
-                        "product_id": product_id,
-                        "event_type": "PURCHASE",
-                        "quantity": restock_qty,
-                        "event_id": f"seed-restock-{sku}-{day_label}",
-                    },
-                )
-                print(f"    {day_label}: ⚠ Oversell blocked → PURCHASE {restock_qty} (emergency)")
+                if _record(
+                    db,
+                    product_id,
+                    EventType.PURCHASE,
+                    restock_qty,
+                    f"seed-restock-{sku}-{day_label}",
+                    when,
+                ):
+                    stock += restock_qty
+                print(f"    {day_label}: ⚠ Oversell avoided → PURCHASE {restock_qty} (emergency)")
+            else:
+                if _record(
+                    db, product_id, EventType.SALE, daily_demand, f"seed-sale-{sku}-{day_label}", when
+                ):
+                    stock -= daily_demand
+                print(f"    {day_label}: SALE {daily_demand} units")
 
             # --- Occasional return (roughly 1 in 7 days) ---
             if random.random() < 0.14:
                 return_qty = random.randint(1, 3)
-                post(
-                    "/api/inventory/events",
-                    {
-                        "product_id": product_id,
-                        "event_type": "RETURN",
-                        "quantity": return_qty,
-                        "event_id": f"seed-return-{sku}-{day_label}",
-                    },
-                )
+                if _record(
+                    db, product_id, EventType.RETURN, return_qty, f"seed-return-{sku}-{day_label}", when
+                ):
+                    stock += return_qty
                 print(f"    {day_label}: RETURN {return_qty} units")
 
             # --- Mid-period restock (around day 15) ---
             if day_offset == 14:
                 restock_qty = mean * 15
-                post(
-                    "/api/inventory/events",
-                    {
-                        "product_id": product_id,
-                        "event_type": "PURCHASE",
-                        "quantity": restock_qty,
-                        "event_id": f"seed-restock-mid-{sku}",
-                    },
-                )
+                if _record(
+                    db, product_id, EventType.PURCHASE, restock_qty, f"seed-restock-mid-{sku}", when
+                ):
+                    stock += restock_qty
                 print(f"    {day_label}: PURCHASE {restock_qty} units (mid-period restock)")
+
+        db.commit()
 
 
 def main() -> None:
@@ -169,38 +202,43 @@ def main() -> None:
     print("IMS Seed Script — 30 days of realistic inventory data")
     print("=" * 55)
 
-    # 1. Health check
+    db = SessionLocal()
     try:
-        requests.get(f"{BASE}/docs", timeout=3)
-    except requests.ConnectionError:
-        print("\n✗ API is not reachable at http://localhost:8000")
-        print("  Run: make up")
-        return
+        # 1. Create products
+        print("\n[1/2] Creating products...")
+        product_ids = create_products(db)
 
-    # 2. Create products
-    print("\n[1/2] Creating products...")
-    product_ids = create_products()
+        if not product_ids:
+            print("\n✗ No products created. Exiting.")
+            return
 
-    if not product_ids:
-        print("\n✗ No products created. Exiting.")
-        return
+        # 2. Seed events
+        print("\n[2/2] Seeding inventory events...")
+        seed_events(db, product_ids)
 
-    # 3. Seed events
-    print("\n[2/2] Seeding inventory events...")
-    seed_events(product_ids)
+        # 3. Rebuild the inventory_state projection from the events just written
+        summary = rebuild_inventory_state(db)
 
-    # 4. Summary
-    print("\n" + "=" * 55)
-    print("✓ Seeding complete.")
-    print(f"  Products seeded : {len(product_ids)}")
-    print(f"  Days of history : {DAYS}")
-    print()
-    print("Next steps:")
-    print("  make export")
-    print("  make dbt-run")
-    print("  make features")
-    print("  make train")
-    print("=" * 55)
+        # 4. Summary
+        print("\n" + "=" * 55)
+        print("✓ Seeding complete.")
+        print(f"  Products seeded : {len(product_ids)}")
+        print(f"  Days of history : {DAYS}")
+        print(f"  Events replayed : {summary['events_processed']}")
+        print()
+        print("Next steps:")
+        print("  make export")
+        print("  make warehouse")
+        print("  make dbt-run")
+        print("  make dbt-test")
+        print("  make features")
+        print("  make train")
+        print("=" * 55)
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":
