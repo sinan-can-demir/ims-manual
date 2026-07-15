@@ -171,7 +171,12 @@ def seed_events(db, product_ids: dict[str, int]) -> None:
                 print(f"    {day_label}: ⚠ Oversell avoided → PURCHASE {restock_qty} (emergency)")
             else:
                 if _record(
-                    db, product_id, EventType.SALE, daily_demand, f"seed-sale-{sku}-{day_label}", when
+                    db,
+                    product_id,
+                    EventType.SALE,
+                    daily_demand,
+                    f"seed-sale-{sku}-{day_label}",
+                    when,
                 ):
                     stock -= daily_demand
                 print(f"    {day_label}: SALE {daily_demand} units")
@@ -180,7 +185,12 @@ def seed_events(db, product_ids: dict[str, int]) -> None:
             if random.random() < 0.14:
                 return_qty = random.randint(1, 3)
                 if _record(
-                    db, product_id, EventType.RETURN, return_qty, f"seed-return-{sku}-{day_label}", when
+                    db,
+                    product_id,
+                    EventType.RETURN,
+                    return_qty,
+                    f"seed-return-{sku}-{day_label}",
+                    when,
                 ):
                     stock += return_qty
                 print(f"    {day_label}: RETURN {return_qty} units")
