@@ -199,19 +199,29 @@ Phase 4 — Testing
       - Run pytest on every push/PR  
       - Build and lint Docker image  
 
-Phase 5 — AWS deployment  
-Sub-phase 1 (core API + RDS on ECS Fargate) is scoped and its Terraform is
-written under infra/ — pending the operator's manual bootstrap + first
-`terraform apply` (real AWS resources, not yet live). See infra/README.md.  
-[~] Configure AWS infrastructure (ECS Fargate, RDS PostgreSQL, ALB) — Terraform ready, not yet applied  
+Phase 5 — Deployment (self-hosted + AWS)  
+Two paths, not one — being open-source, the default should be the cheapest
+and most portable option, with AWS available for teams that already run
+there. See README.md's "Deployment" section.
+
+Self-hosted (default, docs/deployment/self-hosted.md):  
+[x] docker-compose.prod.yml — prod hardening overlay (no dev bind-mount,
+      no exposed DB port, fail-loud on missing secrets)  
+[x] docker-compose.caddy.yml — optional automatic HTTPS via Caddy  
+[x] Self-hosted deployment guide  
+[ ] Move data lake from local filesystem to object storage (S3-compatible —
+      evaluate MinIO or a provider's S3-compatible bucket, not AWS-only)  
+[ ] Deploy dashboard alongside the API in the self-hosted stack  
+
+AWS (enterprise, infra/README.md):  
+[~] Configure AWS infrastructure (ECS Fargate, RDS PostgreSQL, ALB) — Terraform written (infra/), not yet applied  
 [~] Store secrets in AWS Secrets Manager, inject as environment variables — wired in Terraform, not yet applied  
 [~] Wire CloudWatch Logs — wired in Terraform, not yet applied  
 [ ] Move data lake from local filesystem to S3  
-      (update export_service.py to write Parquet files to an S3 bucket — sub-phase 2)  
-[ ] Deploy dashboard (Streamlit on ECS or EC2, update to read feature store from S3) — sub-phase 2  
-[ ] Set up domain + HTTPS via ACM + ALB — sub-phase 2, deferred until a domain is available  
+[ ] Deploy dashboard (Streamlit on ECS, read feature store from S3)  
+[ ] Set up domain + HTTPS via ACM + ALB  
 
-Milestone: App running on AWS with real auth, secrets management, and CI/CD  
+Milestone: App deployable via either path with real auth, secrets management, and CI/CD  
 
 ------------------------------------------------------------
 EPOCH 8 — Kafka Streaming (Optional)

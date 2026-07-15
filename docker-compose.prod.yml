@@ -1,0 +1,29 @@
+# Production hardening for a self-hosted deploy. Apply on top of the base
+# compose file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# See docs/deployment/self-hosted.md for the full walkthrough. Requires a
+# .env file (copy .env.example) with, at minimum, POSTGRES_PASSWORD and
+# API_KEY set — both fail loudly at startup if unset rather than silently
+# falling back to an insecure default.
+
+services:
+  db:
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-ims}
+    # `!override` replaces the base file's list instead of merging into it —
+    # plain `ports: []` would NOT remove the base's published port under
+    # Compose's default list-merge behavior.
+    ports: !override [] # never expose Postgres directly to the internet
+
+  api:
+    restart: unless-stopped
+    volumes: !override [] # run the built image as-is — no dev-mode source bind-mount
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-ims}
