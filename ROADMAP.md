@@ -181,10 +181,23 @@ Phase 1 — Quick wins (no architecture changes)
 [x] Tune SQLAlchemy connection pool for cloud (pool_pre_ping, pool_size, max_overflow)  
 
 Phase 2 — Security hardening  
-[ ] Remove hardcoded credentials from docker-compose.yml and database.py defaults  
-[ ] Add API authentication (API key header or JWT via FastAPI middleware)  
-[ ] Add non-root USER to Dockerfile  
-[ ] Stop leaking internal error details (replace str(e) in forecast.py 500 responses)  
+[x] Add API authentication (API key header) — app/core/auth.py, X-API-Key,
+      wired via Depends on every router; no-op (with a loud startup warning)
+      if API_KEY is unset, by design for local dev — see SECURITY.md  
+[x] Add non-root USER to Dockerfile — appuser (uid 1000, matches the default
+      first-user uid on most Linux distros so the dev bind-mount stays
+      writable); curl also added, since HEALTHCHECK depended on it but it
+      wasn't present in the slim base image  
+[x] Stop leaking internal error details (replace str(e) in forecast.py 500
+      responses) — generic exceptions now return a fixed "Internal server
+      error" message; only FileNotFoundError still surfaces detail (404, not
+      sensitive)  
+[x] Remove hardcoded credentials from docker-compose.yml and database.py
+      defaults — resolved via docker-compose.prod.yml, which fails loudly on
+      a missing POSTGRES_PASSWORD for real deployments. The base
+      docker-compose.yml / database.py fallback (postgres/postgres) is kept
+      intentionally as a local-dev-only default, same pattern as API_KEY —
+      not used by either deployment path (self-hosted prod overlay or AWS)  
 
 Phase 3 — App hardening  
 [ ] Raise domain exceptions in service layer instead of HTTPException
