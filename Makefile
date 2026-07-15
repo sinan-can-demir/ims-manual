@@ -3,11 +3,23 @@
 .PHONY: up down reset rebuild logs seed export warehouse dbt-run dbt-test dbt-docs \
         features train test test-e2e test-all test-clean migrate shell dashboard lint format
 
-# Always use the project's own venv, never whatever's first on PATH —
-# running these bare broke silently (dbt/joblib "not found") whenever the
-# venv wasn't manually activated first.
-PYTHON := .venv/bin/python
-DBT    := .venv/bin/dbt
+# Prefer the project's own venv so these don't silently break (dbt/joblib
+# "not found") when it exists but isn't activated — but fall back to bare
+# commands when there's no venv at all, e.g. in CI, which installs
+# dependencies straight into the runner's Python with no .venv/ present.
+ifneq ($(wildcard .venv/bin/python),)
+    PYTHON    := $(CURDIR)/.venv/bin/python
+    DBT       := $(CURDIR)/.venv/bin/dbt
+    PYTEST    := $(CURDIR)/.venv/bin/pytest
+    RUFF      := $(CURDIR)/.venv/bin/ruff
+    STREAMLIT := $(CURDIR)/.venv/bin/streamlit
+else
+    PYTHON    := python3
+    DBT       := dbt
+    PYTEST    := pytest
+    RUFF      := ruff
+    STREAMLIT := streamlit
+endif
 
 # -------------------------
 # Dev lifecycle
@@ -46,7 +58,7 @@ logs:
 # Application layer
 # -------------------------
 dashboard:
-	.venv/bin/streamlit run dashboard/app.py
+	$(STREAMLIT) run dashboard/app.py
 
 # -------------------------
 # Database
@@ -76,13 +88,13 @@ warehouse:
 # dbt
 # -------------------------
 dbt-run:
-	cd warehouse/ims_warehouse && ../../$(DBT) run
+	cd warehouse/ims_warehouse && $(DBT) run
 
 dbt-test:
-	cd warehouse/ims_warehouse && ../../$(DBT) test
+	cd warehouse/ims_warehouse && $(DBT) test
 
 dbt-docs:
-	cd warehouse/ims_warehouse && ../../$(DBT) docs generate && ../../$(DBT) docs serve
+	cd warehouse/ims_warehouse && $(DBT) docs generate && $(DBT) docs serve
 
 # -------------------------
 # Features
@@ -106,7 +118,7 @@ shell:
 # Pytest (fast tests)
 # -------------------------
 test:
-	.venv/bin/pytest
+	$(PYTEST)
 
 # -------------------------
 # E2E System Test (Docker)
@@ -131,7 +143,7 @@ test-clean:
 # Lint / format
 # -------------------------
 lint:
-	.venv/bin/ruff check .
+	$(RUFF) check .
 
 format:
-	.venv/bin/ruff format .
+	$(RUFF) format .
