@@ -27,3 +27,13 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-ims}
+    # Gunicorn + UvicornWorker instead of the base file's single-worker dev
+    # command — real concurrency for production traffic. WEB_CONCURRENCY
+    # defaults to 4, tuned for the "1-2 vCPU / 2-4GB RAM" box the deployment
+    # guide recommends; override it in .env for a bigger/smaller server
+    # (rule of thumb: 2x vCPU cores + 1).
+    command: >
+      sh -c "
+      alembic upgrade head &&
+      gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --workers ${WEB_CONCURRENCY:-4}
+      "

@@ -205,9 +205,19 @@ Phase 3 — App hardening
       DuplicateSKUError, InvalidEventError, InsufficientInventoryError), a
       single @app.exception_handler(DomainError) in main.py converts them to
       HTTP responses. app/services/ now has zero FastAPI imports  
-[ ] Run Uvicorn with multiple workers in production (Gunicorn + UvicornWorker)  
-[ ] Improve Dockerfile: multi-stage build, proper .dockerignore (non-root
-      user already done, see Phase 2)  
+[x] Run Uvicorn with multiple workers in production (Gunicorn +
+      UvicornWorker) — docker-compose.prod.yml and infra/ecs.tf both run
+      `gunicorn -k uvicorn.workers.UvicornWorker`; worker count is
+      WEB_CONCURRENCY (default 4) for self-hosted and the gunicorn_workers
+      Terraform variable (default 2, conservative given the cheapest Fargate
+      tier's 512MB) for AWS. The base docker-compose.yml dev command stays
+      single-worker plain Uvicorn for easier debugging  
+[x] Improve Dockerfile: multi-stage build, proper .dockerignore (non-root
+      user already done, see Phase 2) — builder stage installs deps into
+      /opt/venv, final stage only copies that + app code, no pip cache/apt
+      lists/build layer. .dockerignore was missing .venv/ and .git/, which
+      were silently adding ~1GB of dead weight to every build (COPY . .
+      copied them wholesale) — final image dropped from 4.44GB to 3.22GB  
 
 Phase 4 — Testing  
 [x] Run integration tests against a real Postgres instead of SQLite —

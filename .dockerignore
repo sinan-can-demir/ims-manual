@@ -2,3 +2,11 @@
 *.pyc
 __pycache__
 redis-data
+
+# Dev-only — never needed in the image, and .venv/.git alone are ~1GB of
+# pure waste in every build (COPY . . was copying them wholesale before
+# this was added).
+.venv/
+.git/
+.pytest_cache/
+.ruff_cache/
