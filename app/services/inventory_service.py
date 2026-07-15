@@ -1,7 +1,7 @@
-from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import InsufficientInventoryError, InvalidEventError, ProductNotFoundError
 from app.core.logging import logger
 from app.models.enums import EventType
 from app.models.inventory_event import InventoryEvent
@@ -11,34 +11,28 @@ from app.models.product import Product
 
 def normalize_quantity(event_type: EventType, quantity: int) -> int:
     if quantity == 0:
-        raise HTTPException(status_code=400, detail="Quantity cannot be zero")
+        raise InvalidEventError("Quantity cannot be zero")
 
     if event_type in [EventType.PURCHASE, EventType.RETURN]:
         if quantity < 0:
-            raise HTTPException(
-                status_code=400,
-                detail=f"{event_type.value} quantity must be positive",
-            )
+            raise InvalidEventError(f"{event_type.value} quantity must be positive")
         return quantity
 
     if event_type in [EventType.SALE, EventType.DAMAGE]:
         if quantity < 0:
-            raise HTTPException(
-                status_code=400,
-                detail=f"{event_type.value} quantity must be positive",
-            )
+            raise InvalidEventError(f"{event_type.value} quantity must be positive")
         return -quantity
 
     if event_type == EventType.ADJUSTMENT:
         return quantity
 
-    raise HTTPException(status_code=400, detail="Unsupported event type")
+    raise InvalidEventError("Unsupported event type")
 
 
 def get_inventory(db: Session, product_id: int) -> int:
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise ProductNotFoundError(product_id)
     state = db.query(InventoryState).filter(InventoryState.product_id == product_id).first()
     return state.quantity if state else 0
 
@@ -62,7 +56,7 @@ def record_event(
     # Validate product existence
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise ProductNotFoundError(product_id)
 
     try:
         # Lock inventory state row for update or create if not exists
@@ -90,7 +84,7 @@ def record_event(
                 },
             )
 
-            raise HTTPException(status_code=400, detail="Insufficient inventory")
+            raise InsufficientInventoryError(product_id, state.quantity, delta)
 
         # Record the event
         event = InventoryEvent(

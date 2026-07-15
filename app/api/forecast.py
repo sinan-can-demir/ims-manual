@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import DomainError
 from app.core.logging import logger
 from app.database import get_db
 from app.schemas.forecast import ForecastPoint, ForecastResponse, RestockResponse
@@ -50,7 +51,7 @@ def get_restock(product_id: int, db: Session = Depends(get_db)):
     """
     try:
         result = get_restock_recommendation(db, product_id)
-    except HTTPException:
+    except DomainError:
         raise
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))

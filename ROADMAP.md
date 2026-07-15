@@ -200,17 +200,22 @@ Phase 2 — Security hardening
       not used by either deployment path (self-hosted prod overlay or AWS)  
 
 Phase 3 — App hardening  
-[ ] Raise domain exceptions in service layer instead of HTTPException
-      (InsufficientInventoryError, ProductNotFoundError → converted at API layer)  
+[x] Raise domain exceptions in service layer instead of HTTPException —
+      app/core/exceptions.py (DomainError base + ProductNotFoundError,
+      DuplicateSKUError, InvalidEventError, InsufficientInventoryError), a
+      single @app.exception_handler(DomainError) in main.py converts them to
+      HTTP responses. app/services/ now has zero FastAPI imports  
 [ ] Run Uvicorn with multiple workers in production (Gunicorn + UvicornWorker)  
-[ ] Improve Dockerfile: multi-stage build, proper .dockerignore, non-root user  
+[ ] Improve Dockerfile: multi-stage build, proper .dockerignore (non-root
+      user already done, see Phase 2)  
 
 Phase 4 — Testing  
-[ ] Run integration tests against a real Postgres instead of SQLite
-      (SELECT FOR UPDATE is silently ignored in SQLite — concurrency tests are not valid)  
-[ ] Add CI/CD via GitHub Actions (make repo public first for free CI)  
-      - Run pytest on every push/PR  
-      - Build and lint Docker image  
+[x] Run integration tests against a real Postgres instead of SQLite —
+      ci.yml's test job runs the full suite (incl. @pytest.mark.postgres
+      tests like SELECT FOR UPDATE oversell protection) against a real
+      Postgres service container  
+[x] Add CI/CD via GitHub Actions — ci.yml runs lint/test/docker-build on
+      every push and PR to main  
 
 Phase 5 — Deployment (self-hosted + AWS)  
 Two paths, not one — being open-source, the default should be the cheapest
