@@ -72,9 +72,11 @@ jobs:
   # keys are stored in this repo. The role, ECS cluster/service, and ECR
   # repo are provisioned separately via Terraform (see infra/README.md);
   # this job only builds+pushes an image and points the ECS service at it.
+  # Opt-in: skipped entirely until AWS_DEPLOY_ROLE_ARN is set (i.e. until
+  # someone runs the Terraform bootstrap), rather than failing CI.
   deploy:
     needs: [lint, test, docker-build]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.AWS_DEPLOY_ROLE_ARN != ''
     runs-on: ubuntu-latest
     permissions:
       id-token: write
