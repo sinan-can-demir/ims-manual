@@ -1,6 +1,25 @@
 # 📦 IMS Makefile
 
-.PHONY: up down reset rebuild logs test test-e2e test-all test-clean migrate shell warehouse train dashboard lint format
+.PHONY: up down reset rebuild logs seed export warehouse dbt-run dbt-test dbt-docs \
+        features train test test-e2e test-all test-clean migrate shell dashboard lint format
+
+# Prefer the project's own venv so these don't silently break (dbt/joblib
+# "not found") when it exists but isn't activated — but fall back to bare
+# commands when there's no venv at all, e.g. in CI, which installs
+# dependencies straight into the runner's Python with no .venv/ present.
+ifneq ($(wildcard .venv/bin/python),)
+    PYTHON    := $(CURDIR)/.venv/bin/python
+    DBT       := $(CURDIR)/.venv/bin/dbt
+    PYTEST    := $(CURDIR)/.venv/bin/pytest
+    RUFF      := $(CURDIR)/.venv/bin/ruff
+    STREAMLIT := $(CURDIR)/.venv/bin/streamlit
+else
+    PYTHON    := python3
+    DBT       := dbt
+    PYTEST    := pytest
+    RUFF      := ruff
+    STREAMLIT := streamlit
+endif
 
 # -------------------------
 # Dev lifecycle
@@ -14,8 +33,19 @@ up-d:
 down:
 	docker compose down
 
+# data_lake/, feature_store/, warehouse/, and models/ are local files, not
+# Docker volumes — `down -v` wipes the DB but leaves these stale. A stale
+# checkpoint.json in particular makes the next `make export` skip freshly
+# seeded events (it resumes from the old high-water mark) while old rows
+# with now-colliding IDs stay in the parquet files, breaking the dbt
+# uniqueness test and starving the feature store. Clear them so a reset
+# always starts every downstream stage from a clean slate.
 reset:
 	docker compose down -v
+	rm -rf data_lake/inventory_events/* data_lake/checkpoints.json
+	rm -f feature_store/*.parquet
+	rm -f warehouse/*.parquet warehouse/ims.duckdb
+	rm -f models/*.pkl
 	docker compose up --build
 
 rebuild:
@@ -28,7 +58,7 @@ logs:
 # Application layer
 # -------------------------
 dashboard:
-	streamlit run dashboard/app.py
+	$(STREAMLIT) run dashboard/app.py
 
 # -------------------------
 # Database
@@ -37,40 +67,46 @@ migrate:
 	docker compose exec api alembic upgrade head
 
 # -------------------------
+# Seed data
+# -------------------------
+seed:
+	$(PYTHON) scripts/seed_data.py
+
+# -------------------------
 # Export events
 # -------------------------
 export:
-	python -m app.scripts.export_events
+	$(PYTHON) -m app.scripts.export_events
 
 # -------------------------
 # Warehouse
 # -------------------------
 warehouse:
-	python -m app.scripts.build_warehouse
+	$(PYTHON) -m app.scripts.build_warehouse
 
 # -------------------------
 # dbt
 # -------------------------
 dbt-run:
-	cd warehouse/ims_warehouse && dbt run
+	cd warehouse/ims_warehouse && $(DBT) run
 
 dbt-test:
-	cd warehouse/ims_warehouse && dbt test
+	cd warehouse/ims_warehouse && $(DBT) test
 
 dbt-docs:
-	cd warehouse/ims_warehouse && dbt docs generate && dbt docs serve
+	cd warehouse/ims_warehouse && $(DBT) docs generate && $(DBT) docs serve
 
 # -------------------------
 # Features
 # -------------------------
 features:
-	python -m app.scripts.build_features
+	$(PYTHON) -m app.scripts.build_features
 
 # -------------------------
 # Train
 # -------------------------
 train:
-	python -m app.scripts.train_model
+	$(PYTHON) -m app.scripts.train_model
 
 # -------------------------
 # Shell access
@@ -82,7 +118,7 @@ shell:
 # Pytest (fast tests)
 # -------------------------
 test:
-	pytest
+	$(PYTEST)
 
 # -------------------------
 # E2E System Test (Docker)
@@ -107,7 +143,7 @@ test-clean:
 # Lint / format
 # -------------------------
 lint:
-	ruff check .
+	$(RUFF) check .
 
 format:
-	ruff format .
+	$(RUFF) format .
