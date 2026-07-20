@@ -1,6 +1,6 @@
 # IMS — Inventory Management System
 Author: Sinan Demir
-Last Updated: 2026-04-01
+Last Updated: 2026-07-19
 
 This roadmap organizes the development of IMS into **epochs**.
 Each epoch unlocks the next capability. The system evolves from a simple
@@ -238,18 +238,46 @@ Self-hosted (default, docs/deployment/self-hosted.md):
 [x] docker-compose.caddy.yml — optional automatic HTTPS via Caddy  
 [x] Self-hosted deployment guide  
 [ ] Move data lake from local filesystem to object storage (S3-compatible —
-      evaluate MinIO or a provider's S3-compatible bucket, not AWS-only)  
+      evaluate MinIO or a provider's S3-compatible bucket, not AWS-only) (#22)  
 [ ] Deploy dashboard alongside the API in the self-hosted stack  
 
 AWS (enterprise, infra/README.md):  
 [~] Configure AWS infrastructure (ECS Fargate, RDS PostgreSQL, ALB) — Terraform written (infra/), not yet applied  
 [~] Store secrets in AWS Secrets Manager, inject as environment variables — wired in Terraform, not yet applied  
 [~] Wire CloudWatch Logs — wired in Terraform, not yet applied  
-[ ] Move data lake from local filesystem to S3  
+[ ] Move data lake from local filesystem to S3 (#22)  
 [ ] Deploy dashboard (Streamlit on ECS, read feature store from S3)  
 [ ] Set up domain + HTTPS via ACM + ALB  
+[ ] Harden RDS Terraform defaults — backups, deletion_protection, multi-AZ (#20)  
 
 Milestone: App deployable via either path with real auth, secrets management, and CI/CD  
+
+------------------------------------------------------------
+EPOCH 7 — Phase 6 — Observability, Auth Upgrade & Ops Maturity (TODO)
+------------------------------------------------------------
+
+Goal: Close out the remaining production-hardening backlog, filed as GitHub
+issues #16–23 under the `production-hardening` milestone. Order below
+follows each issue's `status:*` label (ready before blocked) and real
+dependencies, not filing order — see the issue tracker for current status,
+this list is a point-in-time snapshot.
+
+[ ] Add Prometheus metrics and structured JSON logging (#19 — status:ready,
+      no blockers; do first so later work is easier to debug)  
+[ ] Make migrations a one-off job, remove inline alembic from startup (#21 —
+      inline migrations racing across multiple Gunicorn workers, introduced
+      by the Phase 3 multi-worker change, is a real correctness risk)  
+[ ] Add dependency & secret scanning to CI — Dependabot, trivy/pip-audit (#17)  
+[ ] CI: run dbt and integration tests against Postgres in CI (#18)  
+[ ] Replace shared API key auth with JWT/OIDC-based authentication (#23 —
+      needs-review; scope before starting)  
+[ ] Add model registry (MLflow) and log Prophet artifacts (#16 — help-wanted)  
+[ ] Move data lake to S3, update export/dbt to use S3 (#22 — status:blocked,
+      same item as the Phase 5 data-lake checkboxes above; unblock the
+      self-hosted-vs-AWS object storage decision first)  
+
+Milestone: production-hardening (GitHub milestone) — see #16, #17, #18, #19,
+#20, #21, #22, #23 for live status  
 
 ------------------------------------------------------------
 EPOCH 8 — Kafka Streaming (Optional)
