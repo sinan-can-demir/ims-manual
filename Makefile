@@ -1,7 +1,7 @@
 # 📦 IMS Makefile
 
 .PHONY: up down reset rebuild logs seed export warehouse dbt-run dbt-test dbt-docs \
-        features train test test-e2e test-all test-clean migrate shell dashboard lint format
+        features train train-deps test test-e2e test-all test-clean migrate shell dashboard lint format
 
 # Prefer the project's own venv so these don't silently break (dbt/joblib
 # "not found") when it exists but isn't activated — but fall back to bare
@@ -105,6 +105,11 @@ features:
 # -------------------------
 # Train
 # -------------------------
+# One-off: installs mlflow-skinny on top of requirements.txt so `make train`
+# can log to the model registry. Not part of `make up`/the API image.
+train-deps:
+	$(PYTHON) -m pip install -r requirements-train.txt
+
 train:
 	$(PYTHON) -m app.scripts.train_model
 

@@ -72,6 +72,11 @@ feature_store/*.parquet
 # trained model artifacts (regenerate with `make train`)
 models/*.pkl
 
+# MLflow model registry (local sqlite backend + artifact store)
+mlflow.db
+mlflow.db-*
+mlruns/
+
 # coverage data
 .coverage
 .coverage.*

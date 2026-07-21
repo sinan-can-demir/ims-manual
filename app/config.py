@@ -24,3 +24,13 @@ WAREHOUSE_END_DATE = os.getenv("WAREHOUSE_END_DATE", "2030-12-31")
 # -------------------
 FEATURE_STORE_PATH = Path(os.getenv("FEATURE_STORE_PATH", BASE_DIR / "feature_store"))
 MODELS_DIR = Path(os.getenv("MODELS_DIR", BASE_DIR / "models"))
+
+# -------------------------
+# Model Registry (MLflow)
+# -------------------------
+# SQLite-backed by default (single file, no server to run) — MLflow's plain
+# filesystem store is in maintenance mode and no longer supports the model
+# registry. Requires `pip install -r requirements-train.txt`; not part of
+# the API image (see docs/model-registry.md).
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", f"sqlite:///{BASE_DIR / 'mlflow.db'}")
+MLFLOW_EXPERIMENT_NAME = os.getenv("MLFLOW_EXPERIMENT_NAME", "prophet-demand-forecasting")

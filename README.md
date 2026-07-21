@@ -103,15 +103,18 @@ ims-manual/
 │       └── tests/          # dbt data quality tests
 ├── feature_store/          # Engineered features for ML
 ├── models/                 # Trained Prophet model artifacts (gitignored — run `make train` to generate)
+├── mlflow.db, mlruns/      # MLflow model registry (gitignored — see docs/model-registry.md)
 ├── dashboard/              # Streamlit app
 ├── docker/                 # Dockerfile
 ├── docker-compose.yml            # local dev
 ├── docker-compose.prod.yml       # self-hosted prod hardening (overlay)
 ├── docker-compose.caddy.yml      # optional automatic HTTPS (overlay)
 ├── docs/deployment/        # self-hosted deployment guide
+├── docs/model-registry.md  # MLflow setup, promotion/rollback
 ├── infra/                  # Terraform for AWS (enterprise deployment)
 ├── Makefile                # One-command dev workflow
-└── requirements.txt
+├── requirements.txt
+└── requirements-train.txt  # extra deps for `make train` only (mlflow-skinny)
 ```
 
 ---
@@ -138,7 +141,8 @@ make warehouse    # build DuckDB warehouse tables
 make dbt-run      # run dbt transformations
 make dbt-test     # run data quality tests
 make features     # build feature store
-make train        # train Prophet models
+make train-deps   # one-off: install mlflow-skinny for the model registry
+make train        # train Prophet models, logged to the MLflow registry
 
 # Launch dashboard
 streamlit run dashboard/app.py
@@ -250,7 +254,8 @@ make warehouse    # build DuckDB warehouse
 make dbt-run      # run dbt models
 make dbt-test     # run dbt data quality tests
 make features     # build feature store
-make train        # train Prophet models
+make train-deps   # install mlflow-skinny (one-off, for the model registry)
+make train        # train Prophet models, logged to the MLflow registry
 make test         # run tests
 make test-e2e     # run e2e tests
 make lint         # ruff check .
@@ -273,6 +278,8 @@ make format       # ruff format .
 | `WAREHOUSE_ROOT` | `./warehouse` | DuckDB warehouse root |
 | `FEATURE_STORE_PATH` | `./feature_store` | Feature store output path |
 | `MODELS_DIR` | `./models` | Trained Prophet model output path |
+| `MLFLOW_TRACKING_URI` | `sqlite:///./mlflow.db` | MLflow model registry backend, used by `make train` only — see [docs/model-registry.md](docs/model-registry.md) |
+| `MLFLOW_EXPERIMENT_NAME` | `prophet-demand-forecasting` | MLflow experiment name for training runs |
 | `WAREHOUSE_START_DATE` / `WAREHOUSE_END_DATE` | `2020-01-01` / `2030-12-31` | Date range for the generated `dim_dates` warehouse table |
 | `PYTHONPATH` | `/app` | Python module path (set inside the Docker container) |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `postgres` / unset / `ims` | `docker-compose.prod.yml` only — compose-level substitution to build `DATABASE_URL`, see [self-hosted deployment](docs/deployment/self-hosted.md) |
