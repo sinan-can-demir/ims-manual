@@ -1,0 +1,11 @@
+# Extra dependencies for `make train` only — not installed in the API
+# Docker image (see docker/Dockerfile, which installs requirements.txt
+# alone). Install with:
+#
+#   pip install -r requirements-train.txt
+#
+# mlflow-skinny is the tracking/registry client only (no bundled server/UI —
+# see docs/model-registry.md for viewing runs via `mlflow ui`, which needs
+# the full `mlflow` package instead).
+-r requirements.txt
+mlflow-skinny==3.14.0

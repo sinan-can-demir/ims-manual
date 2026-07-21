@@ -1,6 +1,6 @@
 # IMS — Inventory Management System
 Author: Sinan Demir
-Last Updated: 2026-07-19
+Last Updated: 2026-07-20
 
 This roadmap organizes the development of IMS into **epochs**.
 Each epoch unlocks the next capability. The system evolves from a simple
@@ -271,7 +271,13 @@ this list is a point-in-time snapshot.
 [ ] CI: run dbt and integration tests against Postgres in CI (#18)  
 [ ] Replace shared API key auth with JWT/OIDC-based authentication (#23 —
       needs-review; scope before starting)  
-[ ] Add model registry (MLflow) and log Prophet artifacts (#16 — help-wanted)  
+[x] Add model registry (MLflow) and log Prophet artifacts (#16 — help-wanted) —
+      mlflow-skinny (requirements-train.txt, not part of the API image),
+      SQLite-backed registry (mlflow.db + mlruns/, both gitignored). `make
+      train` registers each product's model (prophet_{product_id}) and logs
+      params + in-sample MAE/MAPE; serving (forecast()/load_model()) is
+      unchanged — still reads models/*.pkl directly. Promotion/rollback via
+      MLflow's alias API documented in docs/model-registry.md  
 [ ] Move data lake to S3, update export/dbt to use S3 (#22 — status:blocked,
       same item as the Phase 5 data-lake checkboxes above; unblock the
       self-hosted-vs-AWS object storage decision first)  

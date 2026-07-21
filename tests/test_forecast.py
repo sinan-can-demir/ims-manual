@@ -130,6 +130,34 @@ def test_forecast_returns_n_days():
     assert len(df) == 7
 
 
+@pytest.mark.skipif(not os.path.exists(_FEATURE_FILE), reason=_FEATURE_SKIP_REASON)
+def test_train_model_registers_to_mlflow(tmp_path, monkeypatch):
+    pytest.importorskip("mlflow", reason="run `make train-deps` to install training dependencies")
+
+    import app.services.forecast_service as forecast_service
+
+    # Isolated model dir + registry so this test doesn't touch the real
+    # models/ or mlflow.db, and doesn't collide with runs from `make train`.
+    monkeypatch.setattr(forecast_service, "MODELS_DIR", tmp_path)
+    monkeypatch.setattr(
+        forecast_service, "MLFLOW_TRACKING_URI", f"sqlite:///{tmp_path / 'mlflow.db'}"
+    )
+    monkeypatch.chdir(tmp_path)  # artifact store defaults to ./mlruns relative to cwd
+
+    result = forecast_service.train_model(1)
+
+    assert (tmp_path / "prophet_1.pkl").exists()
+    assert result["mlflow_model_version"] == 1
+    assert result["mae_in_sample"] >= 0
+
+    import mlflow
+
+    client = mlflow.MlflowClient()
+    versions = client.search_model_versions("name='prophet_1'")
+    assert len(versions) == 1
+    assert versions[0].run_id == result["mlflow_run_id"]
+
+
 def test_forecast_endpoint_no_model(client):
     response = client.get("/api/forecast/99999")
     assert response.status_code == 404
