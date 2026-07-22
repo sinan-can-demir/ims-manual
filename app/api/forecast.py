@@ -1,6 +1,6 @@
 # app/api/forecast.py
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import DomainError
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/forecast", tags=["forecast"])
 
 
 @router.get("/{product_id}", response_model=ForecastResponse)
-def get_forecast(product_id: int, days: int = 7):
+def get_forecast(product_id: int, days: int = Query(default=7, ge=1, le=90)):
     """
     Return a demand forecast for the next N days.
     Requires a trained model — run make train first.
