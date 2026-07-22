@@ -12,6 +12,39 @@ An event-driven inventory platform with a full analytics pipeline and ML-powered
 
 ---
 
+## What Works Now
+
+- [x] Event-sourced inventory core — append-only `InventoryEvent` log +
+      `InventoryState` projection, idempotent writes (`event_id`), oversell
+      protection
+- [x] Product + inventory REST API (FastAPI/Postgres), API-key auth
+- [x] Bulk CSV import (`POST /api/inventory/events/bulk`) — per-row partial
+      success
+- [x] Generic HMAC-signed webhook ingestion (`POST /api/webhooks/ingest`)
+- [x] Full analytics pipeline: Parquet data lake → DuckDB warehouse → dbt
+      models + data quality tests
+- [x] Prophet demand forecasting per product, tracked in an MLflow model
+      registry
+- [x] Streamlit dashboard — live inventory, event history, 30-day forecasts
+- [x] Prometheus metrics + structured JSON request logging
+      (`/metrics`, `X-Request-ID`)
+- [x] CI on every push/PR — lint, full test suite (incl. Postgres-only
+      tests), Docker build
+- [x] Self-hosted deployment path (Docker Compose + optional Caddy HTTPS)
+
+## In Progress
+
+- [ ] Move the data lake off the local filesystem onto S3-compatible object
+      storage
+- [ ] Deploy the dashboard alongside the API (self-hosted + AWS stacks)
+- [ ] Apply the AWS Terraform — ECS/RDS/ALB infra is written, not yet running
+- [ ] Replace shared API-key auth with JWT/OIDC
+- [ ] Add dependency & secret scanning to CI (Dependabot, pip-audit/trivy)
+
+See [ROADMAP.md](ROADMAP.md) for the full backlog.
+
+---
+
 ## What it does
 
 - Tracks inventory changes as an **immutable event log** (event sourcing + CQRS)
