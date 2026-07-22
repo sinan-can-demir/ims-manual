@@ -336,7 +336,7 @@ under the GitHub milestone "Data Ingestion — Sales Integration".
       failing the whole batch on one bad row
 [x] Generic CSV bulk-import endpoint — POST /api/inventory/events/bulk,
       columns: sku, event_type, quantity, event_id
-[ ] Generic HMAC-signed webhook receiver — POST /api/webhooks/ingest,
+[x] Generic HMAC-signed webhook receiver — POST /api/webhooks/ingest,
       reuses the same ingestion core, WEBHOOK_SECRET-based signature
       verification mirroring app/core/auth.py's existing hmac.compare_digest
       pattern

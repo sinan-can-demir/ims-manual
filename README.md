@@ -220,6 +220,49 @@ GET /api/inventory/{product_id}       # current stock level
 GET /api/inventory/events/{product_id} # full event history
 ```
 
+### Bulk / Generic Ingestion
+
+Two generic, platform-agnostic paths for real sales data — not tied to a
+specific POS/e-commerce vendor — beyond posting one event at a time:
+
+```http
+POST /api/inventory/events/bulk
+Content-Type: multipart/form-data
+
+file: events.csv   # columns: sku, event_type, quantity, event_id
+```
+
+```http
+POST /api/webhooks/ingest
+X-Webhook-Signature: <hex HMAC-SHA256 of the raw body, keyed by WEBHOOK_SECRET>
+{
+    "source": "generic",
+    "events": [
+        { "sku": "WGT-001", "event_type": "SALE", "quantity": 3, "external_id": "txn_123" }
+    ]
+}
+```
+
+Both share one ingestion core and report per-row results — one bad row
+doesn't fail the whole batch:
+
+```json
+{
+    "rows_processed": 2,
+    "rows_succeeded": 1,
+    "rows_failed": 1,
+    "results": [
+        { "row_number": 1, "event_id": "...", "status": "success", "error": null },
+        { "row_number": 2, "event_id": "...", "status": "failed", "error": "..." }
+    ]
+}
+```
+
+The webhook's `event_id` is derived as `"{source}:{external_id}"`. It's
+signed separately from `/api`'s `X-API-Key` (see
+[Environment Variables](#environment-variables)) — a different trust
+boundary, since it's meant for an external system to call directly.
+
 ---
 
 ## Testing
@@ -241,6 +284,8 @@ pytest --cov=app tests/  # with coverage
 | `test_auth.py` | API-key auth: exempt `/health`, missing/wrong/correct key, auth-disabled mode |
 | `test_forecast.py` | Forecast/restock endpoints, including 404s on nonexistent products |
 | `test_metrics.py` | `/metrics` exposition, request counters/latency, `X-Request-ID` header |
+| `test_ingestion.py` | Shared ingestion core + CSV bulk import: partial success, idempotency, malformed rows |
+| `test_webhook.py` | Webhook signature verification, per-source event_id namespacing, partial failure |
 
 ---
 
@@ -278,6 +323,7 @@ make format       # ruff format .
 | `DB_MAX_OVERFLOW` | `10` | Extra connections allowed above pool size under load |
 | `CORS_ORIGINS` | `http://localhost:8501` | Comma-separated list of allowed CORS origins |
 | `API_KEY` | unset | Shared API key for all `/api` routes; unset disables auth (local dev only — see [SECURITY.md](SECURITY.md)) |
+| `WEBHOOK_SECRET` | unset | Shared secret for verifying `POST /api/webhooks/ingest` signatures (`X-Webhook-Signature`); unset disables verification (local dev only) |
 | `DATA_LAKE_ROOT` | `./data_lake` | Parquet data lake root |
 | `WAREHOUSE_ROOT` | `./warehouse` | DuckDB warehouse root |
 | `FEATURE_STORE_PATH` | `./feature_store` | Feature store output path |
