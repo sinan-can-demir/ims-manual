@@ -32,6 +32,17 @@ An event-driven inventory platform with a full analytics pipeline and ML-powered
       tests), Docker build
 - [x] Self-hosted deployment path (Docker Compose + optional Caddy HTTPS)
 
+## In Progress
+
+- [ ] Move the data lake off the local filesystem onto S3-compatible object
+      storage
+- [ ] Deploy the dashboard alongside the API (self-hosted + AWS stacks)
+- [ ] Apply the AWS Terraform — ECS/RDS/ALB infra is written, not yet running
+- [ ] Replace shared API-key auth with JWT/OIDC
+- [ ] Add dependency & secret scanning to CI (Dependabot, pip-audit/trivy)
+
+See [ROADMAP.md](ROADMAP.md) for the full backlog.
+
 ---
 
 ## What it does
