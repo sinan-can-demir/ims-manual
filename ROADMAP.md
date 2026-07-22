@@ -290,6 +290,36 @@ Milestone: production-hardening (GitHub milestone) — see #16, #17, #18, #19,
 #20, #21, #22, #23 for live status  
 
 ------------------------------------------------------------
+EPOCH 7.1 — Dashboard UX Overhaul
+------------------------------------------------------------
+
+Goal: Epoch 6 shipped a complete, working single-page dashboard — this
+epoch is the first UX-iteration pass on top of it, not a partial build.
+Tracked under the GitHub milestone "UX Improvements — Dashboard".
+
+[x] Extract cached data-loading layer into dashboard/data.py, add
+      dashboard/__init__.py — behavior-preserving, no UX change yet.
+      AppTest-based dashboard tests introduced (tests/test_dashboard.py,
+      dashboard_db fixture in tests/conftest.py) to prove the testing
+      mechanism before multipage complexity is added.
+[ ] Add list_products() (app/services/product_service.py) and
+      get_fleet_status() (new app/services/fleet_service.py) — backend only,
+      no dashboard changes yet
+[ ] Multi-page navigation via st.navigation()/st.Page() (dashboard/views/),
+      product selector sourced from the products table instead of the
+      feature-store parquet file (fixes numeric-ID-only display and
+      products-with-no-sales-history being invisible)
+[ ] Product Detail page enhancements — forecast horizon slider (1-90,
+      matching the API bound), safety_stock/days_of_stock_remaining KPI
+      tiles, event-type filter + pagination
+[ ] Fleet Overview page — portfolio-wide KPIs, urgency filtering, row-click
+      deep link into Product Detail
+[ ] Admin/Ops page (replay + export controls) — deferred until #32
+      (dashboard auth) lands, so it ships already protected instead of
+      exposed
+[ ] Optional: .streamlit/config.toml theming polish
+
+------------------------------------------------------------
 EPOCH 8 — Kafka Streaming (Optional)
 ------------------------------------------------------------
 
