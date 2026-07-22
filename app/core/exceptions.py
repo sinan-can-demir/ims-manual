@@ -26,6 +26,14 @@ class DuplicateSKUError(DomainError):
         super().__init__(f"Product with this SKU already exists: {sku}")
 
 
+class ProductSkuNotFoundError(DomainError):
+    status_code = 404
+
+    def __init__(self, sku: str):
+        self.sku = sku
+        super().__init__(f"Product with SKU '{sku}' not found")
+
+
 class InvalidEventError(DomainError):
     status_code = 400
 
