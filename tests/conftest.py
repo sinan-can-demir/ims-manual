@@ -52,6 +52,24 @@ def db():
         Base.metadata.drop_all(bind=engine)
 
 
+@pytest.fixture
+def dashboard_db(monkeypatch):
+    """
+    Points the dashboard's directly-imported app.database.SessionLocal at
+    this same StaticPool test engine. The dashboard doesn't use FastAPI's
+    Depends(get_db) — it calls SessionLocal() itself — so
+    dependency_overrides (as the `client` fixture uses) doesn't apply here;
+    patching the attribute that `from app.database import SessionLocal`
+    resolves at script-execution time is what actually takes effect.
+    """
+    Base.metadata.create_all(bind=engine)
+    monkeypatch.setattr("app.database.SessionLocal", TestingSessionLocal)
+    try:
+        yield TestingSessionLocal
+    finally:
+        Base.metadata.drop_all(bind=engine)
+
+
 @pytest.fixture(scope="function")
 def client(db):
     def override_get_db():
