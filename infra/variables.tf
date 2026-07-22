@@ -77,7 +77,7 @@ variable "ecs_task_memory" {
 }
 
 variable "ecs_desired_count" {
-  description = "Number of API tasks to run. Keep at 1 unless the inline `alembic upgrade head` migration step in the container command is replaced with a dedicated one-off migration task (see README.md) — concurrent task starts would otherwise race on migrations."
+  description = "Number of API tasks to run. Migrations run as a dedicated one-off task in CI (see aws_ecs_task_definition.migrate, ci.yml's deploy job) before each service update, not inline in the api container's startup command — safe to raise above 1."
   type        = number
   default     = 1
 }
