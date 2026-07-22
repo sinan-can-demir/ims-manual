@@ -163,6 +163,12 @@ def test_forecast_endpoint_no_model(client):
     assert response.status_code == 404
 
 
+@pytest.mark.parametrize("days", [0, -1, 91, 10_000])
+def test_forecast_endpoint_rejects_out_of_range_days(client, days):
+    response = client.get(f"/api/forecast/99999?days={days}")
+    assert response.status_code == 422
+
+
 def test_restock_endpoint_nonexistent_product(client):
     response = client.get("/api/forecast/restock/99999")
     assert response.status_code == 404
