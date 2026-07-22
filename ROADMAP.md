@@ -262,8 +262,12 @@ follows each issue's `status:*` label (ready before blocked) and real
 dependencies, not filing order — see the issue tracker for current status,
 this list is a point-in-time snapshot.
 
-[ ] Add Prometheus metrics and structured JSON logging (#19 — status:ready,
-      no blockers; do first so later work is easier to debug)  
+[x] Add Prometheus metrics and structured JSON logging (#19) — `/metrics`
+      endpoint (app/core/metrics.py) with request counters + latency
+      histogram, multiprocess-safe for Gunicorn's multi-worker production
+      mode (gunicorn.conf.py); RequestLoggingMiddleware logs a
+      `request_completed` JSON event per request with a correlation ID,
+      also returned as `X-Request-ID`. See docs/observability.md  
 [ ] Make migrations a one-off job, remove inline alembic from startup (#21 —
       inline migrations racing across multiple Gunicorn workers, introduced
       by the Phase 3 multi-worker change, is a real correctness risk)  

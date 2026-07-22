@@ -12,7 +12,8 @@ from app.api.inventory import router as inventory_router
 from app.api.products import router as products_router
 from app.core.auth import require_api_key
 from app.core.exceptions import DomainError
-from app.core.logging import logger
+from app.core.logging import RequestLoggingMiddleware, logger
+from app.core.metrics import MetricsMiddleware, metrics_response
 
 
 @asynccontextmanager
@@ -32,6 +33,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(MetricsMiddleware)
 
 _auth = [Depends(require_api_key)]
 
@@ -48,3 +51,8 @@ async def domain_error_handler(request: Request, exc: DomainError):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/metrics")
+def metrics():
+    return metrics_response()

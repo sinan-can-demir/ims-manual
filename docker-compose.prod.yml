@@ -27,6 +27,9 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-ims}
+      # Required so /metrics can merge counters across Gunicorn's worker
+      # processes — see gunicorn.conf.py and app/core/metrics.py.
+      PROMETHEUS_MULTIPROC_DIR: /tmp/prometheus_multiproc
     # Gunicorn + UvicornWorker instead of the base file's single-worker dev
     # command — real concurrency for production traffic. WEB_CONCURRENCY
     # defaults to 4, tuned for the "1-2 vCPU / 2-4GB RAM" box the deployment
@@ -35,5 +38,5 @@ services:
     command: >
       sh -c "
       alembic upgrade head &&
-      gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --workers ${WEB_CONCURRENCY:-4}
+      gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --workers ${WEB_CONCURRENCY:-4} --config gunicorn.conf.py
       "
