@@ -20,6 +20,13 @@ services:
     # Compose's default list-merge behavior.
     ports: !override [] # never expose Postgres directly to the internet
 
+  migrate:
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-ims}
+    command: alembic upgrade head
+
   api:
     restart: unless-stopped
     volumes: !override [] # run the built image as-is — no dev-mode source bind-mount
@@ -34,9 +41,8 @@ services:
     # command — real concurrency for production traffic. WEB_CONCURRENCY
     # defaults to 4, tuned for the "1-2 vCPU / 2-4GB RAM" box the deployment
     # guide recommends; override it in .env for a bigger/smaller server
-    # (rule of thumb: 2x vCPU cores + 1).
+    # (rule of thumb: 2x vCPU cores + 1). Migrations no longer run inline
+    # here — the base file's `migrate` service (overridden above with prod
+    # credentials) runs once and `api` waits for it via depends_on.
     command: >
-      sh -c "
-      alembic upgrade head &&
       gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --workers ${WEB_CONCURRENCY:-4} --config gunicorn.conf.py
-      "

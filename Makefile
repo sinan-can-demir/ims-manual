@@ -64,7 +64,7 @@ dashboard:
 # Database
 # -------------------------
 migrate:
-	docker compose exec api alembic upgrade head
+	docker compose run --rm migrate
 
 # -------------------------
 # Seed data
