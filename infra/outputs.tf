@@ -16,6 +16,11 @@ output "ecs_service_name" {
   value = aws_ecs_service.api.name
 }
 
+output "ecs_migrate_task_definition_family" {
+  description = "Task definition family for the one-off migration task, run via `aws ecs run-task` in ci.yml's deploy job before each service update."
+  value       = aws_ecs_task_definition.migrate.family
+}
+
 output "github_actions_role_arn" {
   description = "Register this as the AWS_DEPLOY_ROLE_ARN GitHub repo variable: gh variable set AWS_DEPLOY_ROLE_ARN --body <this value>"
   value       = aws_iam_role.github_deploy.arn

@@ -115,9 +115,8 @@ curl -H "X-API-Key: <your api_key>" http://$(terraform output -raw alb_dns_name)
 
 - HTTP only — no domain/ACM cert yet, so no HTTPS. Don't send anything
   sensitive to the ALB URL over the open internet until that's added.
-- `desired_count = 1` — migrations run inline (`alembic upgrade head` before
-  `uvicorn` starts, same as `docker-compose.yml`). This is safe at
-  `desired_count = 1` but would race if you ever raise it — switch to a
-  dedicated one-off `ecs run-task` migration step first if you do.
+- Migrations run as a dedicated one-off task (`aws_ecs_task_definition.migrate`,
+  run via `aws ecs run-task` in `ci.yml`'s deploy job) before each deploy
+  updates the `api` service — safe to raise `desired_count` above 1.
 - RDS is single-AZ, no deletion protection, no final snapshot on destroy —
   fine for this project's current stage, not production-grade durability.

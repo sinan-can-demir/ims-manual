@@ -99,6 +99,59 @@ jobs:
           docker build -f docker/Dockerfile -t "$IMAGE" .
           docker push "$IMAGE"
 
+      # Migrations run as a one-off task, registered and run against the new
+      # image, and must succeed before the api service is ever updated to
+      # that image — replaces the old inline `alembic upgrade head &&` that
+      # used to race across concurrent task starts (see
+      # infra/ecs.tf's aws_ecs_task_definition.migrate).
+      - name: Fetch current migrate task definition
+        run: |
+          aws ecs describe-task-definition --task-definition ims-migrate \
+            --query taskDefinition > migrate-task-def.json
+
+      - uses: aws-actions/amazon-ecs-render-task-definition@v1
+        id: render-migrate
+        with:
+          task-definition: migrate-task-def.json
+          container-name: migrate
+          image: ${{ steps.ecr-login.outputs.registry }}/ims-api:sha-${{ github.sha }}
+
+      - name: Register migrate task definition revision
+        id: register-migrate
+        run: |
+          CLEANED=$(jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' \
+            "${{ steps.render-migrate.outputs.task-definition }}")
+          TASK_DEF_ARN=$(aws ecs register-task-definition \
+            --cli-input-json "$CLEANED" \
+            --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "task_def_arn=$TASK_DEF_ARN" >> "$GITHUB_OUTPUT"
+
+      - name: Run migration task and wait for completion
+        run: |
+          NETCFG=$(aws ecs describe-services --cluster ims-cluster --services ims-api-service \
+            --query 'services[0].networkConfiguration.awsvpcConfiguration' --output json)
+          SUBNETS=$(echo "$NETCFG" | jq -r '.subnets | join(",")')
+          SGS=$(echo "$NETCFG" | jq -r '.securityGroups | join(",")')
+
+          TASK_ARN=$(aws ecs run-task \
+            --cluster ims-cluster \
+            --task-definition "${{ steps.register-migrate.outputs.task_def_arn }}" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SGS],assignPublicIp=DISABLED}" \
+            --query 'tasks[0].taskArn' --output text)
+          echo "Migration task: $TASK_ARN"
+
+          aws ecs wait tasks-stopped --cluster ims-cluster --tasks "$TASK_ARN"
+
+          EXIT_CODE=$(aws ecs describe-tasks --cluster ims-cluster --tasks "$TASK_ARN" \
+            --query 'tasks[0].containers[0].exitCode' --output text)
+          echo "Migration exit code: $EXIT_CODE"
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "Migration failed — aborting before the api service is updated."
+            exit 1
+          fi
+
       - name: Fetch current task definition
         run: |
           aws ecs describe-task-definition --task-definition ims-api \
