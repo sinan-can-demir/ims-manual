@@ -1,7 +1,7 @@
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import DuplicateSKUError
+from app.core.exceptions import DuplicateSKUError, ProductSkuNotFoundError
 from app.core.logging import logger
 from app.models.product import Product
 from app.schemas.product import ProductCreate
@@ -22,3 +22,10 @@ def create_product(db: Session, product: ProductCreate) -> Product:
     except IntegrityError:
         db.rollback()
         raise DuplicateSKUError(product.sku)
+
+
+def get_product_by_sku(db: Session, sku: str) -> Product:
+    product = db.query(Product).filter(Product.sku == sku).first()
+    if not product:
+        raise ProductSkuNotFoundError(sku)
+    return product

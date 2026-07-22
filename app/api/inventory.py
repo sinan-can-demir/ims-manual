@@ -1,21 +1,49 @@
-from fastapi import APIRouter, Depends, Query
+import pandas as pd
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.inventory_event import InventoryEvent
 from app.schemas.export import ExportMetadata
+from app.schemas.ingestion import IngestResponse
 from app.schemas.inventory_event import InventoryEventCreate, InventoryEventResponse
 from app.schemas.inventory_state import InventoryStateResponse
 from app.services.export_service import export_inventory_events
+from app.services.ingestion_service import ingest_events
 from app.services.inventory_service import get_inventory, record_event
 from app.services.replay_service import rebuild_inventory_state
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
+_BULK_IMPORT_COLUMNS = ["sku", "event_type", "quantity", "event_id"]
+
 
 @router.post("/events", response_model=InventoryEventResponse, status_code=201)
 def create_inventory_event(event: InventoryEventCreate, db: Session = Depends(get_db)):
     return record_event(db, event.product_id, event.event_type, event.quantity, event.event_id)
+
+
+@router.post("/events/bulk", response_model=IngestResponse)
+def bulk_import_events(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """
+    Generic CSV bulk import for inventory events. Columns:
+    sku, event_type, quantity, event_id. Partial success is expected —
+    each row is resolved and recorded independently, see IngestResponse.
+    """
+    try:
+        df = pd.read_csv(file.file)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not parse CSV: {e}")
+
+    missing = [col for col in _BULK_IMPORT_COLUMNS if col not in df.columns]
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"CSV missing required columns: {', '.join(missing)}",
+        )
+
+    rows = df[_BULK_IMPORT_COLUMNS].to_dict(orient="records")
+    return ingest_events(db, rows)
 
 
 @router.post("/replay")

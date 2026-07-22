@@ -320,6 +320,28 @@ Tracked under the GitHub milestone "UX Improvements — Dashboard".
 [ ] Optional: .streamlit/config.toml theming polish
 
 ------------------------------------------------------------
+EPOCH 7.2 — Real Sales-Data Ingestion
+------------------------------------------------------------
+
+Goal: today, data only enters via POST /api/inventory/events one row at a
+time, or a demo-only seed script. This epoch adds a generic,
+platform-agnostic ingestion path — not tied to a specific POS vendor — that
+a future Shopify/Square/etc. adapter could eventually sit behind. Tracked
+under the GitHub milestone "Data Ingestion — Sales Integration".
+
+[x] Shared ingestion core (app/services/ingestion_service.py) — resolves
+      each row's product by SKU (new: product_service.get_product_by_sku,
+      ProductSkuNotFoundError), calls the existing record_event() per row
+      (already idempotent/race-safe), collects per-row results instead of
+      failing the whole batch on one bad row
+[x] Generic CSV bulk-import endpoint — POST /api/inventory/events/bulk,
+      columns: sku, event_type, quantity, event_id
+[ ] Generic HMAC-signed webhook receiver — POST /api/webhooks/ingest,
+      reuses the same ingestion core, WEBHOOK_SECRET-based signature
+      verification mirroring app/core/auth.py's existing hmac.compare_digest
+      pattern
+
+------------------------------------------------------------
 EPOCH 8 — Kafka Streaming (Optional)
 ------------------------------------------------------------
 
