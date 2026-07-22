@@ -36,6 +36,15 @@ If you need per-user auth, OAuth, or anything beyond "one shared secret keeps
 casual/opportunistic access out," this project isn't there yet — see
 [`ROADMAP.md`](ROADMAP.md) (Epoch 7) for what's planned.
 
+## Webhook signature verification
+
+`POST /api/webhooks/ingest` (see [`ROADMAP.md`](ROADMAP.md) Epoch 7.2) uses a
+separate mechanism from `X-API-Key`: an `X-Webhook-Signature` header holding
+an HMAC-SHA256 digest of the raw request body, keyed by the `WEBHOOK_SECRET`
+env var (`app/core/auth.py`'s `require_webhook_signature`). Same shape and
+same limitations as the API key above — one shared secret, no-op if unset
+(local dev only), constant-time comparison via `hmac.compare_digest`.
+
 ## Prior security review
 
 [`docs/archive/report.md`](docs/archive/report.md) is a point-in-time AI code
