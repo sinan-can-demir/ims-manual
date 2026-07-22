@@ -18,6 +18,21 @@ services:
       timeout: 5s
       retries: 10
 
+  # One-shot: applies migrations then exits. `api` waits for this to
+  # succeed before starting, instead of racing its own inline `alembic
+  # upgrade head` against other workers/replicas at boot.
+  migrate:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - PYTHONPATH=/app
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/ims
+    command: alembic upgrade head
+
   api:
     build:
       context: .
@@ -26,6 +41,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "8000:8000"
     volumes:
@@ -33,11 +50,7 @@ services:
     environment:
       - PYTHONPATH=/app
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/ims
-    command: >
-      sh -c "
-      alembic upgrade head &&
-      uvicorn app.main:app --host 0.0.0.0 --port 8000
-      "
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 volumes:
   postgres_data:
