@@ -111,6 +111,7 @@ ims-manual/
 ├── docker-compose.caddy.yml      # optional automatic HTTPS (overlay)
 ├── docs/deployment/        # self-hosted deployment guide
 ├── docs/model-registry.md  # MLflow setup, promotion/rollback
+├── docs/observability.md   # Prometheus metrics, structured request logging
 ├── infra/                  # Terraform for AWS (enterprise deployment)
 ├── Makefile                # One-command dev workflow
 ├── requirements.txt
@@ -183,7 +184,9 @@ locally (see Getting Started above).
 
 All routes below live under `/api` and require an `X-API-Key` header if
 `API_KEY` is set (see [Environment Variables](#environment-variables) and
-[SECURITY.md](SECURITY.md)). `/health` is always unauthenticated.
+[SECURITY.md](SECURITY.md)). `/health` and `/metrics` (Prometheus format —
+see [docs/observability.md](docs/observability.md)) are always
+unauthenticated.
 
 ### Products
 
@@ -237,6 +240,7 @@ pytest --cov=app tests/  # with coverage
 | `test_idempotency.py` | Duplicate event handling |
 | `test_auth.py` | API-key auth: exempt `/health`, missing/wrong/correct key, auth-disabled mode |
 | `test_forecast.py` | Forecast/restock endpoints, including 404s on nonexistent products |
+| `test_metrics.py` | `/metrics` exposition, request counters/latency, `X-Request-ID` header |
 
 ---
 
@@ -284,6 +288,7 @@ make format       # ruff format .
 | `PYTHONPATH` | `/app` | Python module path (set inside the Docker container) |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `postgres` / unset / `ims` | `docker-compose.prod.yml` only — compose-level substitution to build `DATABASE_URL`, see [self-hosted deployment](docs/deployment/self-hosted.md) |
 | `DOMAIN` | unset | `docker-compose.caddy.yml` only — your domain, for automatic HTTPS |
+| `PROMETHEUS_MULTIPROC_DIR` | unset | Merges `/metrics` across Gunicorn workers in production — see [docs/observability.md](docs/observability.md) |
 
 Copy `.env.example` to `.env` and adjust as needed.
 
