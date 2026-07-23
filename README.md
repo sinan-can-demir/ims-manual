@@ -323,6 +323,14 @@ pytest --cov=app tests/  # with coverage
 | `test_metrics.py` | `/metrics` exposition, request counters/latency, `X-Request-ID` header |
 | `test_ingestion.py` | Shared ingestion core + CSV bulk import: partial success, idempotency, malformed rows |
 | `test_webhook.py` | Webhook signature verification, per-source event_id namespacing, partial failure |
+| `test_edge_cases.py` | RETURN/DAMAGE/ADJUSTMENT event types, quantity validation, stock going negative |
+| `test_export.py` | Data lake export: full + incremental, partition structure, schema, empty-export no-crash |
+| `test_warehouse.py` | dbt dimension/fact table builds, `_safe_path()` traversal/symlink guard |
+| `test_replay.py` | Rebuilding `InventoryState` from the event log |
+| `test_pagination.py` | `limit`/`offset` on list endpoints |
+| `test_dashboard.py` | Streamlit dashboard renders and shows inventory metrics (AppTest) |
+| `test_security_headers.py` | Response headers: nosniff/X-Frame-Options/Referrer-Policy, conditional HSTS |
+| `test_db_isolation.py` | Test DB isolation between test cases |
 
 ---
 
