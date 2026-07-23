@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from .utils import create_product
 
-_SECRET = "test-webhook-secret"
+_SECRET = "test-webhook-secret"  # noqa: S105 -- test fixture value, not a real credential
 
 
 def _signed_request(client, payload: dict, secret: str = _SECRET):
