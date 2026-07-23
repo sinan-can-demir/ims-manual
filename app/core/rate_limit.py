@@ -10,14 +10,19 @@ _DEFAULT_RATE_LIMIT = os.getenv("RATE_LIMIT", "100/minute")
 
 def rate_limit_key(request: Request) -> str:
     """
-    Keys by X-API-Key when present so quota is per-caller rather than
-    per-IP — several legitimate clients can share a NAT/VPS IP. Falls back
-    to client IP for unauthenticated requests (API_KEY unset, local dev).
+    Always keys by client IP, never by the presented X-API-Key value.
+    IMS has exactly one valid shared key (no per-user keys), so keying by
+    the presented value would let an attacker reset their bucket on every
+    request just by guessing a different key each time — defeating the
+    brute-force mitigation this is meant to provide.
     """
-    api_key = request.headers.get("X-API-Key")
-    if api_key:
-        return f"key:{api_key}"
-    return f"ip:{request.client.host if request.client else 'unknown'}"
+    return request.client.host if request.client else "unknown"
 
 
+# Storage defaults to slowapi's in-process memory:// backend, which is not
+# shared across Gunicorn's worker processes in prod (WEB_CONCURRENCY,
+# docker-compose.prod.yml) — same class of gap PROMETHEUS_MULTIPROC_DIR
+# exists to solve for /metrics, unaddressed here. Effective limit in prod
+# is therefore ~WEB_CONCURRENCY x RATE_LIMIT, not exactly RATE_LIMIT. See
+# SECURITY.md.
 limiter = Limiter(key_func=rate_limit_key, default_limits=[_DEFAULT_RATE_LIMIT])

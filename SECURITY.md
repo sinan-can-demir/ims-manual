@@ -47,11 +47,25 @@ same limitations as the API key above — one shared secret, no-op if unset
 
 `/api` routes (products, inventory, forecast — anything behind
 `require_api_key`) are rate-limited via `slowapi`
-(`app/core/rate_limit.py`), keyed by `X-API-Key` when present, else client
-IP. Default limit is `100/minute`, configurable via the `RATE_LIMIT` env
-var. Limit exceeded returns `429`. `/health`, `/metrics`, and
-`/api/webhooks/ingest` (signature-verified, separate trust boundary — see
-below) are exempt.
+(`app/core/rate_limit.py`), keyed by client IP. Default limit is
+`100/minute`, configurable via the `RATE_LIMIT` env var. Limit exceeded
+returns `429`. `/health`, `/metrics`, and `/api/webhooks/ingest`
+(signature-verified, separate trust boundary — see below) are exempt.
+
+Keying is by IP only, deliberately — not by the presented `X-API-Key`
+value. IMS has exactly one valid shared key, so there's no per-client
+identity to preserve, and keying by presented value would let an attacker
+reset their bucket on every request just by guessing a different key each
+time.
+
+**Known limitation:** the default `memory://` storage backend is
+per-process, not shared across Gunicorn's worker processes in production
+(`WEB_CONCURRENCY`, `docker-compose.prod.yml` — same gap
+`PROMETHEUS_MULTIPROC_DIR` exists to solve for `/metrics`). The effective
+limit in prod is therefore roughly `WEB_CONCURRENCY x RATE_LIMIT`, not
+exactly `RATE_LIMIT`. Divide `RATE_LIMIT` by your worker count if you need
+the exact ceiling; a shared backend (e.g. Redis) would fix this properly
+but isn't in place yet.
 
 ## Response security headers
 

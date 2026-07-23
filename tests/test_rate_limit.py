@@ -59,17 +59,25 @@ def test_health_and_metrics_are_exempt(client):
             assert client.get("/metrics").status_code == 200
 
 
-def test_key_func_uses_api_key_over_ip():
+def test_key_func_ignores_presented_api_key():
+    """
+    A different guessed X-API-Key on every request must not grant a fresh
+    bucket — otherwise brute-forcing the key trivially bypasses the limit.
+    """
     scope = {
         "type": "http",
-        "headers": [(b"x-api-key", b"secret-123")],
+        "headers": [(b"x-api-key", b"guess-1")],
         "client": ("1.2.3.4", 1234),
     }
-    request = Request(scope)
-    assert rate_limit_key(request) == "key:secret-123"
+    other_scope = {
+        "type": "http",
+        "headers": [(b"x-api-key", b"guess-2")],
+        "client": ("1.2.3.4", 1234),
+    }
+    assert rate_limit_key(Request(scope)) == rate_limit_key(Request(other_scope))
 
 
-def test_key_func_falls_back_to_ip():
+def test_key_func_uses_client_ip():
     scope = {"type": "http", "headers": [], "client": ("1.2.3.4", 1234)}
     request = Request(scope)
-    assert rate_limit_key(request) == "ip:1.2.3.4"
+    assert rate_limit_key(request) == "1.2.3.4"
