@@ -239,7 +239,10 @@ Self-hosted (default, docs/deployment/self-hosted.md):
 [x] Self-hosted deployment guide  
 [ ] Move data lake from local filesystem to object storage (S3-compatible —
       evaluate MinIO or a provider's S3-compatible bucket, not AWS-only) (#22)  
-[ ] Deploy dashboard alongside the API in the self-hosted stack  
+[x] Deploy dashboard alongside the API in the self-hosted stack — `dashboard`
+      compose service; no app-level auth of its own, so its port stays
+      unpublished until the Caddy overlay fronts it with basic_auth on a
+      dedicated port (#32)  
 
 AWS (enterprise, infra/README.md):  
 [~] Configure AWS infrastructure (ECS Fargate, RDS PostgreSQL, ALB) — Terraform written (infra/), not yet applied  
@@ -314,9 +317,9 @@ Tracked under the GitHub milestone "UX Improvements — Dashboard".
       tiles, event-type filter + pagination
 [ ] Fleet Overview page — portfolio-wide KPIs, urgency filtering, row-click
       deep link into Product Detail
-[ ] Admin/Ops page (replay + export controls) — deferred until #32
-      (dashboard auth) lands, so it ships already protected instead of
-      exposed
+[ ] Admin/Ops page (replay + export controls) — was deferred until #32
+      (dashboard auth) landed; now unblocked, so it ships already protected
+      instead of exposed
 [ ] Optional: .streamlit/config.toml theming polish
 
 ------------------------------------------------------------

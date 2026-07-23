@@ -45,6 +45,19 @@ env var (`app/core/auth.py`'s `require_webhook_signature`). Same shape and
 same limitations as the API key above — one shared secret, no-op if unset
 (local dev only), constant-time comparison via `hmac.compare_digest`.
 
+## Dashboard access
+
+The Streamlit dashboard (`dashboard/app.py`) talks to the database directly
+via the service layer — it doesn't go through `/api` and has none of the
+`X-API-Key` protection above. It has no auth of its own at all. In the
+self-hosted deployment path, its container port is never published by
+default; it's only reachable once the Caddy overlay
+(`docker-compose.caddy.yml`) fronts it with HTTP basic auth on a dedicated
+HTTPS listener (`https://<DOMAIN>:8501`) — see
+[`docs/deployment/self-hosted.md`](docs/deployment/self-hosted.md). Same
+caveat as above: basic auth here is one shared username/password, not
+per-user identity.
+
 ## Prior security review
 
 [`docs/archive/report.md`](docs/archive/report.md) is a point-in-time AI code

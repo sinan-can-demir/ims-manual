@@ -52,5 +52,24 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/ims
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
 
+  dashboard:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+    container_name: ims_dashboard
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app:Z
+    environment:
+      - PYTHONPATH=/app
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/ims
+    command: streamlit run dashboard/app.py --server.address=0.0.0.0 --server.port=8501
+
 volumes:
   postgres_data:

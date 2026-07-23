@@ -46,3 +46,19 @@ services:
     # credentials) runs once and `api` waits for it via depends_on.
     command: >
       gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --workers ${WEB_CONCURRENCY:-4} --config gunicorn.conf.py
+
+  dashboard:
+    restart: unless-stopped
+    volumes: !override [] # run the built image as-is — no dev-mode source bind-mount
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-ims}
+    # Unlike `api`, the dashboard has no app-level auth (no X-API-Key
+    # equivalent) — Caddy's basic_auth is its only protection. So, unlike
+    # api's port staying published here, the dashboard's port is hidden by
+    # default in this file already: it only becomes reachable by adding
+    # docker-compose.caddy.yml, which fronts it with basic_auth. Running
+    # prod.yml without the Caddy overlay leaves the dashboard unreachable,
+    # not unauthenticated.
+    ports: !override []

@@ -21,14 +21,27 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      # Dashboard gets its own HTTPS listener on the same domain rather than
+      # a URL subpath — Streamlit's --server.baseUrlPath support is a known
+      # source of broken static assets/websockets behind a stripped-prefix
+      # reverse proxy, while a dedicated port just reverse-proxies cleanly.
+      - "8501:8501"
     environment:
       DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+      DASHBOARD_AUTH_USER: ${DASHBOARD_AUTH_USER:?Set DASHBOARD_AUTH_USER in .env}
+      DASHBOARD_AUTH_HASH: ${DASHBOARD_AUTH_HASH:?Set DASHBOARD_AUTH_HASH in .env}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # `:Z` matters here, not just cosmetic: on SELinux hosts (Fedora/RHEL),
+      # the dev compose file's `.:/app:Z` bind mounts (api/migrate/dashboard)
+      # privately relabel the whole repo tree, including this file — an
+      # unlabeled mount here then gets read-denied by SELinux. `:Z` forces a
+      # fresh label scoped to this container on every start.
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro,Z
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
       - api
+      - dashboard
 
 volumes:
   caddy_data:
