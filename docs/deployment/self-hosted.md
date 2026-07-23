@@ -88,6 +88,41 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml [-f docker-compo
 Migrations run automatically on container start (same `alembic upgrade head`
 step as local dev).
 
+## Dashboard (optional, requires a domain)
+
+The Streamlit dashboard runs as part of the stack (`dashboard` service) but,
+unlike the API, has no auth of its own — no `X-API-Key` equivalent. So its
+container port is never published directly; it's only reachable once the
+Caddy overlay fronts it with HTTP basic auth on its own HTTPS listener.
+Running `docker-compose.prod.yml` without the Caddy overlay leaves the
+dashboard **unreachable**, not unauthenticated.
+
+To enable it, in addition to `DOMAIN`, set in `.env`:
+
+```bash
+DASHBOARD_AUTH_USER=<pick a username>
+DASHBOARD_AUTH_HASH=<generate below>
+```
+
+Generate the password hash (Caddy stores bcrypt hashes, never plaintext).
+Pipe it through `sed` to double each `$` — bcrypt hashes contain literal `$`
+characters, and without this, Compose's `.env` interpolation treats
+`$word` as a variable reference and silently truncates the hash:
+
+```bash
+docker run --rm caddy:2-alpine caddy hash-password --plaintext '<your password>' | sed 's/\$/$$/g'
+```
+
+Then bring up the stack with the Caddy overlay as usual:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.caddy.yml up -d --build
+```
+
+The dashboard is now reachable at `https://your-domain.com:8501`, prompting
+for the username/password above. Make sure port `8501` is open in your
+server's firewall alongside `80`/`443`.
+
 ## Backups
 
 The Postgres data lives in the `postgres_data` named volume. A simple
@@ -104,7 +139,6 @@ above is enough for most self-hosted use.
 ## What this doesn't cover yet
 
 The data pipeline (Parquet data lake, DuckDB warehouse, dbt, Prophet
-training) and the Streamlit dashboard are still local-filesystem/manual-CLI
-concerns on this path — same as in local dev, just run via `make export` /
-`make warehouse` / etc. inside the server, or over SSH. See `ROADMAP.md` for
-what's planned for those.
+training) is still a local-filesystem/manual-CLI concern on this path — same
+as in local dev, just run via `make export` / `make warehouse` / etc. inside
+the server, or over SSH. See `ROADMAP.md` for what's planned there.
