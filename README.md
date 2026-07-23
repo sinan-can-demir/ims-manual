@@ -31,12 +31,16 @@ An event-driven inventory platform with a full analytics pipeline and ML-powered
 - [x] CI on every push/PR — lint, full test suite (incl. Postgres-only
       tests), Docker build
 - [x] Self-hosted deployment path (Docker Compose + optional Caddy HTTPS)
+- [x] Dashboard deployed alongside the API in the self-hosted stack, gated
+      behind Caddy basic auth (the dashboard has no auth of its own)
+- [x] Security response headers (X-Frame-Options, X-Content-Type-Options,
+      Referrer-Policy, conditional HSTS)
 
 ## In Progress
 
 - [ ] Move the data lake off the local filesystem onto S3-compatible object
       storage
-- [ ] Deploy the dashboard alongside the API (self-hosted + AWS stacks)
+- [ ] Deploy the dashboard on AWS (ECS, reading the feature store from S3)
 - [ ] Apply the AWS Terraform — ECS/RDS/ALB infra is written, not yet running
 - [ ] Replace shared API-key auth with JWT/OIDC
 - [ ] Add dependency & secret scanning to CI (Dependabot, pip-audit/trivy)

@@ -45,6 +45,17 @@ env var (`app/core/auth.py`'s `require_webhook_signature`). Same shape and
 same limitations as the API key above — one shared secret, no-op if unset
 (local dev only), constant-time comparison via `hmac.compare_digest`.
 
+## Response security headers
+
+Every response gets `X-Content-Type-Options: nosniff`, `X-Frame-Options:
+DENY`, and `Referrer-Policy: no-referrer` (`app/core/security_headers.py`).
+`Strict-Transport-Security` is added only when the request arrived over
+HTTPS (detected via `X-Forwarded-Proto`, set by both Caddy and AWS's ALB) —
+uvicorn itself always sees plain HTTP, since TLS is terminated upstream, so
+asserting HSTS unconditionally would break local dev and the no-domain
+plain-HTTP self-hosted path. Neither Caddy nor the ALB add these headers on
+their own; `Caddyfile` is a bare `reverse_proxy`.
+
 ## Dashboard access
 
 The Streamlit dashboard (`dashboard/app.py`) talks to the database directly

@@ -259,11 +259,14 @@ Milestone: App deployable via either path with real auth, secrets management, an
 EPOCH 7 — Phase 6 — Observability, Auth Upgrade & Ops Maturity (TODO)
 ------------------------------------------------------------
 
-Goal: Close out the remaining production-hardening backlog, filed as GitHub
-issues #16–23 under the `production-hardening` milestone. Order below
-follows each issue's `status:*` label (ready before blocked) and real
-dependencies, not filing order — see the issue tracker for current status,
-this list is a point-in-time snapshot.
+Goal: Close out the remaining production-hardening backlog. Originally filed
+as issues #16–23 under the `production-hardening` milestone; GitHub has
+since reorganized this backlog (plus a second full audit pass, #27–33) into
+three milestones by risk/effort — Hardening Phase A (Quick Wins), Phase B
+(Moderate Risk), Phase C (Needs Scoping). Order below follows each issue's
+`status:*` label (ready before blocked) and real dependencies, not filing
+order — see the issue tracker for current status, this list is a
+point-in-time snapshot.
 
 [x] Add Prometheus metrics and structured JSON logging (#19) — `/metrics`
       endpoint (app/core/metrics.py) with request counters + latency
@@ -271,13 +274,6 @@ this list is a point-in-time snapshot.
       mode (gunicorn.conf.py); RequestLoggingMiddleware logs a
       `request_completed` JSON event per request with a correlation ID,
       also returned as `X-Request-ID`. See docs/observability.md  
-[ ] Make migrations a one-off job, remove inline alembic from startup (#21 —
-      inline migrations racing across multiple Gunicorn workers, introduced
-      by the Phase 3 multi-worker change, is a real correctness risk)  
-[ ] Add dependency & secret scanning to CI — Dependabot, trivy/pip-audit (#17)  
-[ ] CI: run dbt and integration tests against Postgres in CI (#18)  
-[ ] Replace shared API key auth with JWT/OIDC-based authentication (#23 —
-      needs-review; scope before starting)  
 [x] Add model registry (MLflow) and log Prophet artifacts (#16 — help-wanted) —
       mlflow-skinny (requirements-train.txt, not part of the API image),
       SQLite-backed registry (mlflow.db + mlruns/, both gitignored). `make
@@ -285,12 +281,43 @@ this list is a point-in-time snapshot.
       params + in-sample MAE/MAPE; serving (forecast()/load_model()) is
       unchanged — still reads models/*.pkl directly. Promotion/rollback via
       MLflow's alias API documented in docs/model-registry.md  
+
+Hardening Phase A — Quick Wins:  
+[x] Bound the `days` query param on GET /api/forecast/{product_id} (#30)  
+[x] Add security response headers middleware (#27) — X-Content-Type-Options,
+      X-Frame-Options, and Referrer-Policy set on every response;
+      Strict-Transport-Security only when X-Forwarded-Proto is https, since
+      uvicorn itself always sees plain HTTP behind Caddy/ALB
+      (app/core/security_headers.py)  
+[ ] Add rate limiting to /api routes (#28)  
+[ ] Add security-focused lint rules to CI — ruff `S` ruleset (#29)  
+[ ] Misc hardening cleanup — .dockerignore gaps, pin base image, add a
+      replay-endpoint auth test (#31)  
+[ ] CI: run dbt and integration tests against Postgres in CI (#18)  
+[ ] Add dependency & secret scanning to CI — Dependabot, trivy/pip-audit (#17)  
+
+Hardening Phase B — Moderate Risk:  
+[x] Make migrations a one-off job, remove inline alembic from startup (#21 —
+      inline migrations racing across multiple Gunicorn workers, introduced
+      by the Phase 3 multi-worker change, was a real correctness risk) —
+      done for both self-hosted (#38) and AWS (#39)  
+[x] Add authentication in front of the Streamlit dashboard (#32) — see the
+      Phase 5 self-hosted checklist above  
+[x] Validate DuckDB glob paths in warehouse_service.py instead of raw
+      f-string interpolation (#33) — `_safe_path()` now requires the
+      resolved path to actually stay within its expected root, not just
+      reject shell metacharacters; also catches symlink escapes  
+[ ] Harden RDS Terraform defaults — backups, deletion_protection, multi-AZ (#20)  
+
+Hardening Phase C — Needs Scoping:  
+[ ] Replace shared API key auth with JWT/OIDC-based authentication (#23 —
+      needs-review; scope before starting)  
 [ ] Move data lake to S3, update export/dbt to use S3 (#22 — status:blocked,
       same item as the Phase 5 data-lake checkboxes above; unblock the
       self-hosted-vs-AWS object storage decision first)  
 
-Milestone: production-hardening (GitHub milestone) — see #16, #17, #18, #19,
-#20, #21, #22, #23 for live status  
+Milestone: Hardening Phase A / Phase B / Phase C (GitHub milestones) — see
+the issue tracker for live status  
 
 ------------------------------------------------------------
 EPOCH 7.1 — Dashboard UX Overhaul
