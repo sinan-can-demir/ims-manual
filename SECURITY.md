@@ -26,8 +26,6 @@ production-grade auth system. Specifically:
   A startup log line (`AUTH DISABLED — API_KEY not set`) warns loudly if the
   app boots without it, precisely so this isn't easy to miss in a deployed
   environment's logs.
-- **No rate limiting.** There's nothing in-app to slow down repeated key
-  guesses beyond whatever sits in front of it (load balancer, reverse proxy).
 - **The comparison is constant-time** (`hmac.compare_digest`), so the auth
   check itself isn't vulnerable to a timing attack — but that only protects
   the comparison, not the broader single-shared-secret design above.
@@ -44,6 +42,16 @@ an HMAC-SHA256 digest of the raw request body, keyed by the `WEBHOOK_SECRET`
 env var (`app/core/auth.py`'s `require_webhook_signature`). Same shape and
 same limitations as the API key above — one shared secret, no-op if unset
 (local dev only), constant-time comparison via `hmac.compare_digest`.
+
+## Rate limiting
+
+`/api` routes (products, inventory, forecast — anything behind
+`require_api_key`) are rate-limited via `slowapi`
+(`app/core/rate_limit.py`), keyed by `X-API-Key` when present, else client
+IP. Default limit is `100/minute`, configurable via the `RATE_LIMIT` env
+var. Limit exceeded returns `429`. `/health`, `/metrics`, and
+`/api/webhooks/ingest` (signature-verified, separate trust boundary — see
+below) are exempt.
 
 ## Response security headers
 
