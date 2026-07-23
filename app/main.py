@@ -36,6 +36,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# slowapi reads the limiter off app.state at request time (SlowAPIMiddleware,
+# @limiter.exempt) rather than taking it as a constructor arg, so it has to be
+# attached here before that middleware is added below.
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
