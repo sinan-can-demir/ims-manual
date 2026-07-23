@@ -110,6 +110,11 @@ def build_fact_table() -> int:
     events_path = _safe_path(INVENTORY_EVENTS_ROOT, root=INVENTORY_EVENTS_ROOT)
     products_path = _safe_path(WAREHOUSE_ROOT / "dim_products.parquet", root=WAREHOUSE_ROOT)
 
+    # noqa justification: paths are config-derived (INVENTORY_EVENTS_ROOT /
+    # WAREHOUSE_ROOT) and already containment-checked by _safe_path() above —
+    # not attacker-controlled input, so this isn't an injectable query despite
+    # the f-string shape. DuckDB's read_parquet() also has no bind-parameter
+    # form for the file path argument, so parameterizing isn't an option here.
     result = conn.execute(f"""
     SELECT
         e.event_id,
@@ -121,7 +126,7 @@ def build_fact_table() -> int:
     FROM read_parquet('{events_path}/**/*.parquet') e
     JOIN read_parquet('{products_path}') p
         ON e.product_id = p.product_id
-    """).df()  # .df() converts directly to pandas DataFrame
+    """).df()  # noqa: S608 -- .df() converts directly to pandas DataFrame
 
     # 4. write to warehouse/fact_inventory_events.parquet
     file_path = WAREHOUSE_ROOT / "fact_inventory_events.parquet"

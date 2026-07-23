@@ -182,8 +182,8 @@ def seed_events(db, product_ids: dict[str, int]) -> None:
                 print(f"    {day_label}: SALE {daily_demand} units")
 
             # --- Occasional return (roughly 1 in 7 days) ---
-            if random.random() < 0.14:
-                return_qty = random.randint(1, 3)
+            if random.random() < 0.14:  # noqa: S311 -- synthetic demo data, not security-sensitive
+                return_qty = random.randint(1, 3)  # noqa: S311
                 if _record(
                     db,
                     product_id,

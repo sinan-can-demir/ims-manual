@@ -4,6 +4,17 @@ line-length = 100
 extend-exclude = ["migrations"]
 
 [tool.ruff.lint]
-# Default ruleset (E/F) plus import sorting. Kept intentionally small —
-# this is a solo/learning project, not enforcing a large style guide.
-select = ["E", "F", "I"]
+# Default ruleset (E/F) plus import sorting and flake8-bandit security
+# checks (S). Kept intentionally small otherwise — this is a solo/learning
+# project, not enforcing a large style guide.
+select = ["E", "F", "I", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+# Test-only exemptions — none of these are attacker-reachable:
+# S101 (assert) is the standard pytest idiom; S608 (SQL-looking f-strings)
+# only ever embed tmp_path-controlled parquet paths from the test itself.
+# S105 (hardcoded secrets) is deliberately NOT blanket-exempted here — that
+# check's value is catching a real credential accidentally pasted into a
+# test, which is exactly where that tends to happen; the one known false
+# positive (tests/test_webhook.py) is noqa'd inline instead.
+"tests/**/*.py" = ["S101", "S608"]
