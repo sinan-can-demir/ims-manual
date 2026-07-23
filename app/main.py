@@ -15,6 +15,7 @@ from app.core.auth import require_api_key
 from app.core.exceptions import DomainError
 from app.core.logging import RequestLoggingMiddleware, logger
 from app.core.metrics import MetricsMiddleware, metrics_response
+from app.core.security_headers import SecurityHeadersMiddleware
 
 
 @asynccontextmanager
@@ -41,6 +42,7 @@ app.add_middleware(
 )
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(MetricsMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 
 _auth = [Depends(require_api_key)]
 
