@@ -1,5 +1,12 @@
 # Project Architecture Design Notes
 
+> **Archived — early-stage notes.** Written 3/14–3/15/2026, covering only the
+> initial event-sourcing core (`POST /api/products`). Predates ingestion,
+> webhooks, the dashboard, the data warehouse/dbt, ML forecasting, and
+> deployment — none of that is reflected here. Kept as project history, not
+> as a current architecture reference — see `README.md`'s Architecture
+> section and `ROADMAP.md` for the current state.
+
 ## 3/14/2026
 
 I ran the test api for `post/api/products` (create product route) and it works. This shows the following pipeline is working successfully.
