@@ -4,11 +4,54 @@ import uuid
 
 import duckdb
 import pandas as pd
+import pytest
 
 from app.services.export_service import export_inventory_events
-from app.services.warehouse_service import build_dim_dates, build_dim_products, build_fact_table
+from app.services.warehouse_service import (
+    _safe_path,
+    build_dim_dates,
+    build_dim_products,
+    build_fact_table,
+)
 
 from .utils import create_product, purchase
+
+
+def test_safe_path_accepts_root_itself(tmp_path):
+    root = tmp_path / "warehouse"
+    root.mkdir()
+    assert _safe_path(root, root=root) == str(root.resolve())
+
+
+def test_safe_path_accepts_child_of_root(tmp_path):
+    root = tmp_path / "warehouse"
+    root.mkdir()
+    child = root / "dim_products.parquet"
+    assert _safe_path(child, root=root) == str(child.resolve())
+
+
+def test_safe_path_rejects_traversal_outside_root(tmp_path):
+    root = tmp_path / "warehouse"
+    root.mkdir()
+    escaped = root / ".." / "secrets"
+    with pytest.raises(ValueError, match="escapes expected root"):
+        _safe_path(escaped, root=root)
+
+
+def test_safe_path_rejects_sibling_directory(tmp_path):
+    root = tmp_path / "warehouse"
+    sibling = tmp_path / "other"
+    root.mkdir()
+    sibling.mkdir()
+    with pytest.raises(ValueError, match="escapes expected root"):
+        _safe_path(sibling, root=root)
+
+
+def test_safe_path_rejects_unsafe_characters(tmp_path):
+    root = tmp_path / "warehouse'; DROP TABLE x; --"
+    root.mkdir()
+    with pytest.raises(ValueError, match="unsafe characters"):
+        _safe_path(root, root=root)
 
 
 def test_build_dim_tables(client, db, warehouse_paths):

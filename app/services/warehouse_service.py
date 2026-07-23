@@ -21,13 +21,24 @@ def _ensure_directories() -> None:
 _UNSAFE_CHARS = frozenset("'\";\\")
 
 
-def _safe_path(path: Path) -> str:
-    """Return the absolute string form of path, rejecting unsafe characters."""
-    resolved = str(path.resolve())
-    bad = _UNSAFE_CHARS & set(resolved)
+def _safe_path(path: Path, root: Path) -> str:
+    """Return the absolute string form of path for DuckDB f-string
+    interpolation (read_parquet has no bind-param support for the glob
+    itself — see docs/archive/report.md M3), after checking it resolves to
+    somewhere inside root and contains no unsafe characters. root is never
+    attacker-influenced today, but this keeps the guard meaningful once
+    paths derive from more than static env config.
+    """
+    resolved = path.resolve()
+    resolved_root = root.resolve()
+    if not resolved.is_relative_to(resolved_root):
+        raise ValueError(f"Path {resolved} escapes expected root {resolved_root}")
+
+    resolved_str = str(resolved)
+    bad = _UNSAFE_CHARS & set(resolved_str)
     if bad:
-        raise ValueError(f"Path contains unsafe characters {bad!r}: {resolved}")
-    return resolved
+        raise ValueError(f"Path contains unsafe characters {bad!r}: {resolved_str}")
+    return resolved_str
 
 
 def build_dim_products(db: Session) -> int:
@@ -96,8 +107,8 @@ def build_fact_table() -> int:
     # But DuckDB uses a hash join here — O(n + m) where n is events and m is products.
     # Products table is small so the hash table fits in memory entirely,
     # making this effectively O(n) in practice.
-    events_path = _safe_path(INVENTORY_EVENTS_ROOT)
-    products_path = _safe_path(WAREHOUSE_ROOT / "dim_products.parquet")
+    events_path = _safe_path(INVENTORY_EVENTS_ROOT, root=INVENTORY_EVENTS_ROOT)
+    products_path = _safe_path(WAREHOUSE_ROOT / "dim_products.parquet", root=WAREHOUSE_ROOT)
 
     result = conn.execute(f"""
     SELECT
