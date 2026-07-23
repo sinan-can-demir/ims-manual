@@ -6,6 +6,9 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.forecast import router as forecast_router
 from app.api.inventory import router as inventory_router
@@ -15,6 +18,7 @@ from app.core.auth import require_api_key
 from app.core.exceptions import DomainError
 from app.core.logging import RequestLoggingMiddleware, logger
 from app.core.metrics import MetricsMiddleware, metrics_response
+from app.core.rate_limit import limiter
 from app.core.security_headers import SecurityHeadersMiddleware
 
 
@@ -32,6 +36,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# slowapi reads the limiter off app.state at request time (SlowAPIMiddleware,
+# @limiter.exempt) rather than taking it as a constructor arg, so it has to be
+# attached here before that middleware is added below.
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 _cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:8501").split(",")
 
 app.add_middleware(
@@ -43,6 +53,7 @@ app.add_middleware(
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(MetricsMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(SlowAPIMiddleware)
 
 _auth = [Depends(require_api_key)]
 
@@ -60,10 +71,12 @@ async def domain_error_handler(request: Request, exc: DomainError):
 
 
 @app.get("/health")
+@limiter.exempt
 def health():
     return {"status": "ok"}
 
 
 @app.get("/metrics")
+@limiter.exempt
 def metrics():
     return metrics_response()
