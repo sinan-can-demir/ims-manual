@@ -27,6 +27,18 @@ def test_wrong_key_returns_401():
         assert response.status_code == 401
 
 
+def test_replay_without_key_returns_401():
+    """
+    /api/inventory/replay rebuilds inventory_state from scratch (delete +
+    reinsert) — explicit coverage that it's auth-gated like the rest of the
+    inventory router, not just implicitly covered by the other cases here.
+    """
+    with patch("app.core.auth._API_KEY", "test-secret"):
+        client = TestClient(app, raise_server_exceptions=False)
+        response = client.post("/api/inventory/replay")
+        assert response.status_code == 401
+
+
 def test_correct_key_passes_auth():
     with patch("app.core.auth._API_KEY", "test-secret"):
         client = TestClient(app, raise_server_exceptions=False)
