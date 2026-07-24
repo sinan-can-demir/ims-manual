@@ -1,5 +1,12 @@
+# Pinned by digest (not just the "3.11-slim" tag) for reproducibility and
+# supply-chain integrity — the tag is mutable and could be repointed upstream.
+# This is a manifest-list digest, so the correct platform (amd64/arm64) is
+# still resolved at pull time. Re-resolve periodically with:
+#   skopeo inspect docker://docker.io/library/python:3.11-slim
+ARG PYTHON_BASE_IMAGE=python:3.11-slim@sha256:db3ff2e1800a8581e2c48a27c3995339d47bdf046da21c7627accd3d51053a93
+
 # ---- builder: install deps into an isolated venv, nothing else survives ----
-FROM python:3.11-slim AS builder
+FROM ${PYTHON_BASE_IMAGE} AS builder
 
 WORKDIR /app
 
@@ -10,7 +17,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ---- final: runtime image only, no pip cache / apt lists / build layer ----
-FROM python:3.11-slim
+FROM ${PYTHON_BASE_IMAGE}
 
 WORKDIR /app
 
